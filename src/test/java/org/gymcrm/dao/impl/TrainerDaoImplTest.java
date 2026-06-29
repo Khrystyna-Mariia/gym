@@ -1,5 +1,6 @@
 package org.gymcrm.dao.impl;
 
+import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.TrainingType;
 import org.gymcrm.storage.InMemoryIdGenerator;
@@ -140,7 +141,7 @@ class TrainerDaoImplTest {
     void shouldThrowExceptionWhenUpdatingNonExistingTrainer() {
         Trainer trainer = createTrainer(99L, "Michael", "Green");
 
-        assertThrows(IllegalArgumentException.class, () -> trainerDao.update(trainer));
+        assertThrows(EntityNotFoundException.class, () -> trainerDao.update(trainer));
     }
 
     private Trainer createTrainer(Long userId, String firstName, String lastName) {

@@ -1,6 +1,7 @@
 package org.gymcrm.service.impl;
 
 import org.gymcrm.dao.TraineeDao;
+import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.service.TraineeService;
 import org.gymcrm.service.UserProfileInitializer;
@@ -27,7 +28,7 @@ public class TraineeServiceImpl implements TraineeService {
     public Trainee create(Trainee trainee) {
         if (trainee == null) {
             logger.warn("Failed to create trainee profile: trainee is null");
-            throw new IllegalArgumentException("Trainee must not be null");
+            throw new ValidationException("Trainee must not be null");
         }
 
         logger.info("Creating trainee profile for {} {}", trainee.getFirstName(), trainee.getLastName());

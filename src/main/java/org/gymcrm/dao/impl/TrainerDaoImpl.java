@@ -1,6 +1,7 @@
 package org.gymcrm.dao.impl;
 
 import org.gymcrm.dao.TrainerDao;
+import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.storage.InMemoryIdGenerator;
 import org.slf4j.Logger;
@@ -48,7 +49,7 @@ public class TrainerDaoImpl implements TrainerDao {
 
         if (!trainerStorage.containsKey(userId)) {
             logger.warn("Cannot update trainer. Trainer with id {} was not found", userId);
-            throw new IllegalArgumentException("Trainer with id " + userId + " was not found");
+            throw new EntityNotFoundException("Trainer with id " + userId + " was not found");
         }
 
         logger.debug("Updating trainer with id {}", userId);

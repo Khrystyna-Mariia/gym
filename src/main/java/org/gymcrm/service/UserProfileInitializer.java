@@ -2,6 +2,7 @@ package org.gymcrm.service;
 
 import org.gymcrm.dao.TraineeDao;
 import org.gymcrm.dao.TrainerDao;
+import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.User;
 import org.gymcrm.util.PasswordGenerator;
 import org.gymcrm.util.UsernameGenerator;
@@ -28,7 +29,7 @@ public class UserProfileInitializer {
 
     public void initialize(User user) {
         if (user == null) {
-            throw new IllegalArgumentException("User must not be null");
+            throw new ValidationException("User must not be null");
         }
 
         String username = usernameGenerator.generate(

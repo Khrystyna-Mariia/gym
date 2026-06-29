@@ -1,6 +1,8 @@
 package org.gymcrm.service.impl;
 
 import org.gymcrm.dao.TrainingDao;
+import org.gymcrm.exception.EntityNotFoundException;
+import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.Training;
 import org.gymcrm.service.TraineeService;
 import org.gymcrm.service.TrainerService;
@@ -30,17 +32,17 @@ public class TrainingServiceImpl implements TrainingService {
     public Training create(Training training) {
         if (training == null) {
             logger.warn("Failed to create training: training is null");
-            throw new IllegalArgumentException("Training must not be null");
+            throw new ValidationException("Training must not be null");
         }
 
         if (training.getTraineeId() == null || traineeService.selectById(training.getTraineeId()).isEmpty()) {
             logger.warn("Failed to create training: trainee with id {} does not exist", training.getTraineeId());
-            throw new IllegalArgumentException("Trainee with id " + training.getTraineeId() + " does not exist");
+            throw new EntityNotFoundException("Trainee with id " + training.getTraineeId() + " does not exist");
         }
 
         if (training.getTrainerId() == null || trainerService.selectById(training.getTrainerId()).isEmpty()) {
             logger.warn("Failed to create training: trainer with id {} does not exist", training.getTrainerId());
-            throw new IllegalArgumentException("Trainer with id " + training.getTrainerId() + " does not exist");
+            throw new EntityNotFoundException("Trainer with id " + training.getTrainerId() + " does not exist");
         }
 
         logger.info("Creating training profile with name {}", training.getTrainingName());

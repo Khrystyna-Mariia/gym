@@ -1,6 +1,8 @@
 package org.gymcrm.service.impl;
 
 import org.gymcrm.dao.TrainingDao;
+import org.gymcrm.exception.EntityNotFoundException;
+import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.Training;
@@ -59,7 +61,7 @@ class TrainingServiceImplTest {
 
     @Test
     void shouldThrowExceptionWhenCreatingNullTraining() {
-        assertThrows(IllegalArgumentException.class, () -> trainingService.create(null));
+        assertThrows(ValidationException.class, () -> trainingService.create(null));
 
         verifyNoInteractions(trainingDao);
         verifyNoInteractions(traineeService);
@@ -72,7 +74,7 @@ class TrainingServiceImplTest {
 
         when(traineeService.selectById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> trainingService.create(training));
+        assertThrows(EntityNotFoundException.class, () -> trainingService.create(training));
 
         verify(traineeService).selectById(1L);
         verifyNoInteractions(trainerService);
@@ -86,7 +88,7 @@ class TrainingServiceImplTest {
         when(traineeService.selectById(1L)).thenReturn(Optional.of(createTrainee()));
         when(trainerService.selectById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> trainingService.create(training));
+        assertThrows(EntityNotFoundException.class, () -> trainingService.create(training));
 
         verify(traineeService).selectById(1L);
         verify(trainerService).selectById(1L);
@@ -99,10 +101,10 @@ class TrainingServiceImplTest {
 
         when(trainingDao.findById(1L)).thenReturn(Optional.of(training));
 
-        Optional<Training> result = trainingService.selectById(1L);
+        Optional<String> resultName = trainingService.selectById(1L).map(Training::getTrainingName);
 
-        assertTrue(result.isPresent());
-        assertEquals(training, result.get());
+        assertTrue(resultName.isPresent());
+        assertEquals("Morning Fitness", resultName.get());
 
         verify(trainingDao).findById(1L);
     }

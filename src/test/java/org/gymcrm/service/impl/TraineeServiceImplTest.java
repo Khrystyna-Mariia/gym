@@ -1,6 +1,7 @@
 package org.gymcrm.service.impl;
 
 import org.gymcrm.dao.TraineeDao;
+import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.service.UserProfileInitializer;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,7 +79,7 @@ class TraineeServiceImplTest {
 
     @Test
     void shouldThrowExceptionWhenCreatingNullTrainee() {
-        assertThrows(IllegalArgumentException.class, () -> traineeService.create(null));
+        assertThrows(ValidationException.class, () -> traineeService.create(null));
 
         verifyNoInteractions(userProfileInitializer);
         verifyNoInteractions(traineeDao);

@@ -1,6 +1,8 @@
 package org.gymcrm.dao.impl;
 
 import org.gymcrm.dao.TraineeDao;
+import org.gymcrm.exception.EntityNotFoundException;
+import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.storage.InMemoryIdGenerator;
 import org.slf4j.Logger;
@@ -37,7 +39,6 @@ public class TraineeDaoImpl implements TraineeDao {
             idGenerator.initializeMaxTraineeId(trainee.getUserId());
         }
 
-
         logger.debug("Saving trainee with id {}", trainee.getUserId());
         traineeStorage.put(trainee.getUserId(), trainee);
 
@@ -50,7 +51,7 @@ public class TraineeDaoImpl implements TraineeDao {
 
         if (!traineeStorage.containsKey(userId)) {
             logger.warn("Cannot update trainee. Trainee with id {} was not found", userId);
-            throw new IllegalArgumentException("Trainee with id " + userId + " was not found");
+            throw new EntityNotFoundException("Trainee with id " + userId + " was not found");
         }
 
         logger.debug("Updating trainee with id {}", userId);
@@ -63,7 +64,7 @@ public class TraineeDaoImpl implements TraineeDao {
     public boolean deleteById(Long userId) {
         if (userId == null) {
             logger.warn("Cannot delete trainee: id is null");
-            throw new IllegalArgumentException("Trainee id must not be null");
+            throw new ValidationException("Trainee id must not be null");
         }
 
         Trainee removedTrainee = traineeStorage.remove(userId);
@@ -96,5 +97,4 @@ public class TraineeDaoImpl implements TraineeDao {
         return traineeStorage.values().stream()
                 .anyMatch(trainee -> username.equalsIgnoreCase(trainee.getUsername()));
     }
-
 }

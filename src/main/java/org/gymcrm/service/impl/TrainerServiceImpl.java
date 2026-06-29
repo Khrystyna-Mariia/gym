@@ -1,6 +1,7 @@
 package org.gymcrm.service.impl;
 
 import org.gymcrm.dao.TrainerDao;
+import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.service.TrainerService;
 import org.gymcrm.service.UserProfileInitializer;
@@ -27,7 +28,7 @@ public class TrainerServiceImpl implements TrainerService {
     public Trainer create(Trainer trainer) {
         if (trainer == null) {
             logger.warn("Failed to create trainer profile: trainer is null");
-            throw new IllegalArgumentException("Trainer must not be null");
+            throw new ValidationException("Trainer must not be null");
         }
 
         logger.info("Creating trainer profile for {} {}", trainer.getFirstName(), trainer.getLastName());

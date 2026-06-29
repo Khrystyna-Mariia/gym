@@ -1,6 +1,7 @@
 package org.gymcrm.service.impl;
 
 import org.gymcrm.dao.TrainerDao;
+import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.TrainingType;
 import org.gymcrm.service.UserProfileInitializer;
@@ -76,7 +77,7 @@ class TrainerServiceImplTest {
 
     @Test
     void shouldThrowExceptionWhenCreatingNullTrainer() {
-        assertThrows(IllegalArgumentException.class, () -> trainerService.create(null));
+        assertThrows(ValidationException.class, () -> trainerService.create(null));
 
         verifyNoInteractions(userProfileInitializer);
         verifyNoInteractions(trainerDao);

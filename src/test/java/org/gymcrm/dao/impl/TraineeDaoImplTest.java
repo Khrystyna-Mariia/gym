@@ -1,5 +1,6 @@
 package org.gymcrm.dao.impl;
 
+import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.storage.InMemoryIdGenerator;
 import org.junit.jupiter.api.BeforeEach;
@@ -143,7 +144,7 @@ class TraineeDaoImplTest {
     void shouldThrowExceptionWhenUpdatingNonExistingTrainee() {
         Trainee trainee = createTrainee(99L, "John", "Smith");
 
-        assertThrows(IllegalArgumentException.class, () -> traineeDao.update(trainee));
+        assertThrows(EntityNotFoundException.class, () -> traineeDao.update(trainee));
     }
 
     @Test
