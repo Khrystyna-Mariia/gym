@@ -56,33 +56,43 @@ public class StorageInitializer {
         List<String> lines = initialDataReader.readLines(initialDataFile);
 
         for (String line : lines) {
-            String[] parts = line.split(";", -1);
-            String recordType = parts[0];
+            try {
+                String[] parts = line.split(";", -1);
 
-            switch (recordType) {
-                case "TRAINING_TYPE" -> {
-                    TrainingType type = initialDataParser.parseTrainingType(parts);
-                    trainingTypeStorage.put(type.getId(), type);
+                if (parts.length == 0 || parts[0].isBlank()) {
+                    logger.warn("Skipping empty or invalid line during storage initialization");
+                    continue;
                 }
-                case "TRAINEE" -> {
-                    Trainee trainee = initialDataParser.parseTrainee(parts);
-                    traineeStorage.put(trainee.getUserId(), trainee);
-                    idGenerator.initializeMaxTraineeId(trainee.getUserId());
+
+                String recordType = parts[0];
+
+                switch (recordType) {
+                    case "TRAINING_TYPE" -> {
+                        TrainingType type = initialDataParser.parseTrainingType(parts);
+                        trainingTypeStorage.put(type.getId(), type);
+                    }
+                    case "TRAINEE" -> {
+                        Trainee trainee = initialDataParser.parseTrainee(parts);
+                        traineeStorage.put(trainee.getUserId(), trainee);
+                        idGenerator.initializeMaxTraineeId(trainee.getUserId());
+                    }
+                    case "TRAINER" -> {
+                        Trainer trainer = initialDataParser.parseTrainer(parts, trainingTypeStorage);
+                        trainerStorage.put(trainer.getUserId(), trainer);
+                        idGenerator.initializeMaxTrainerId(trainer.getUserId());
+                    }
+                    case "TRAINING" -> {
+                        Training training = initialDataParser.parseTraining(parts);
+                        trainingStorage.put(training.getId(), training);
+                        idGenerator.initializeMaxTrainingId(training.getId());
+                    }
+                    default -> logger.warn("Unknown record type discovered during parsing: {}", recordType);
                 }
-                case "TRAINER" -> {
-                    Trainer trainer = initialDataParser.parseTrainer(parts, trainingTypeStorage);
-                    trainerStorage.put(trainer.getUserId(), trainer);
-                    idGenerator.initializeMaxTrainerId(trainer.getUserId());
-                }
-                case "TRAINING" -> {
-                    Training training = initialDataParser.parseTraining(parts);
-                    trainingStorage.put(training.getId(), training);
-                    idGenerator.initializeMaxTrainingId(training.getId());
-                }
-                default -> logger.warn("Unknown record type discovered during parsing: {}", recordType);
+            } catch (Exception e) {
+                logger.error("Failed to parse initial data line: [{}]", line, e);
+                throw new IllegalStateException("Storage initialization aborted due to corrupted data line: " + line, e);
             }
         }
-
         logger.info("Storage initialization finished successfully. Loaded components metrics:");
         logger.info("Types: {}, Trainees: {}, Trainers: {}, Trainings: {}",
                 trainingTypeStorage.size(), traineeStorage.size(), trainerStorage.size(), trainingStorage.size());
