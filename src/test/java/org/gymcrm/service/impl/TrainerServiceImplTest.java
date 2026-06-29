@@ -103,8 +103,7 @@ class TrainerServiceImplTest {
 
         Optional<Trainer> result = trainerService.selectById(1L);
 
-        assertTrue(result.isPresent());
-        assertEquals(trainer, result.get());
+        assertEquals(Optional.of(trainer), result);
         verify(trainerDao).findById(1L);
     }
 

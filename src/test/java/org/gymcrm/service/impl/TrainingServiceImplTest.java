@@ -101,11 +101,9 @@ class TrainingServiceImplTest {
 
         when(trainingDao.findById(1L)).thenReturn(Optional.of(training));
 
-        Optional<String> resultName = trainingService.selectById(1L).map(Training::getTrainingName);
+        Optional<Training> result = trainingService.selectById(1L);
 
-        assertTrue(resultName.isPresent());
-        assertEquals("Morning Fitness", resultName.get());
-
+        assertEquals(Optional.of(training), result);
         verify(trainingDao).findById(1L);
     }
 

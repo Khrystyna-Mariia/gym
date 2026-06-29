@@ -81,15 +81,14 @@ class TrainingDaoImplTest {
 
         Optional<Training> result = trainingDao.findById(1L);
 
-        assertTrue(result.isPresent());
-        assertEquals(training, result.get());
+        assertEquals(Optional.of(training), result);
     }
 
     @Test
     void shouldReturnEmptyOptionalWhenTrainingNotFound() {
         Optional<Training> result = trainingDao.findById(99L);
 
-        assertTrue(result.isEmpty());
+        assertEquals(Optional.empty(), result);
     }
 
     @Test
@@ -105,6 +104,25 @@ class TrainingDaoImplTest {
         assertEquals(2, result.size());
         assertTrue(result.contains(firstTraining));
         assertTrue(result.contains(secondTraining));
+    }
+
+    @Test
+    void shouldContinueGeneratingUniqueIdAfterRemovingTraining() {
+        Training firstTraining = createTraining(null, "Morning Fitness");
+        Training secondTraining = createTraining(null, "Evening Yoga");
+
+        trainingDao.save(firstTraining);
+        trainingDao.save(secondTraining);
+
+        trainingStorage.remove(2L);
+
+        Training thirdTraining = createTraining(null, "Strength Training");
+
+        Training savedTraining = trainingDao.save(thirdTraining);
+
+        assertEquals(3L, savedTraining.getId());
+        assertFalse(trainingStorage.containsKey(2L));
+        assertTrue(trainingStorage.containsKey(3L));
     }
 
     private Training createTraining(Long id, String trainingName) {

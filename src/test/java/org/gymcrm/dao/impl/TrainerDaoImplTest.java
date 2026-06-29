@@ -82,15 +82,14 @@ class TrainerDaoImplTest {
 
         Optional<Trainer> result = trainerDao.findById(1L);
 
-        assertTrue(result.isPresent());
-        assertEquals(trainer, result.get());
+        assertEquals(Optional.of(trainer), result);
     }
 
     @Test
     void shouldReturnEmptyOptionalWhenTrainerNotFound() {
         Optional<Trainer> result = trainerDao.findById(99L);
 
-        assertTrue(result.isEmpty());
+        assertEquals(Optional.empty(), result);
     }
 
     @Test
@@ -142,6 +141,25 @@ class TrainerDaoImplTest {
         Trainer trainer = createTrainer(99L, "Michael", "Green");
 
         assertThrows(EntityNotFoundException.class, () -> trainerDao.update(trainer));
+    }
+
+    @Test
+    void shouldContinueGeneratingUniqueIdAfterRemovingTrainer() {
+        Trainer firstTrainer = createTrainer(null, "Michael", "Green");
+        Trainer secondTrainer = createTrainer(null, "Olivia", "White");
+
+        trainerDao.save(firstTrainer);
+        trainerDao.save(secondTrainer);
+
+        trainerStorage.remove(2L);
+
+        Trainer thirdTrainer = createTrainer(null, "David", "Miller");
+
+        Trainer savedTrainer = trainerDao.save(thirdTrainer);
+
+        assertEquals(3L, savedTrainer.getUserId());
+        assertFalse(trainerStorage.containsKey(2L));
+        assertTrue(trainerStorage.containsKey(3L));
     }
 
     private Trainer createTrainer(Long userId, String firstName, String lastName) {

@@ -83,15 +83,14 @@ class TraineeDaoImplTest {
 
         Optional<Trainee> result = traineeDao.findById(1L);
 
-        assertTrue(result.isPresent());
-        assertEquals(trainee, result.get());
+        assertEquals(Optional.of(trainee), result);
     }
 
     @Test
     void shouldReturnEmptyOptionalWhenTraineeNotFound() {
         Optional<Trainee> result = traineeDao.findById(99L);
 
-        assertTrue(result.isEmpty());
+        assertEquals(Optional.empty(), result);
     }
 
     @Test
@@ -156,6 +155,25 @@ class TraineeDaoImplTest {
 
         assertFalse(traineeStorage.containsKey(1L));
         assertTrue(traineeStorage.isEmpty());
+    }
+
+    @Test
+    void shouldContinueGeneratingUniqueIdAfterDeletingTrainee() {
+        Trainee firstTrainee = createTrainee(null, "John", "Smith");
+        Trainee secondTrainee = createTrainee(null, "Anna", "Brown");
+
+        traineeDao.save(firstTrainee);
+        traineeDao.save(secondTrainee);
+
+        traineeDao.deleteById(2L);
+
+        Trainee thirdTrainee = createTrainee(null, "Olivia", "White");
+
+        Trainee savedTrainee = traineeDao.save(thirdTrainee);
+
+        assertEquals(3L, savedTrainee.getUserId());
+        assertFalse(traineeStorage.containsKey(2L));
+        assertTrue(traineeStorage.containsKey(3L));
     }
 
     private Trainee createTrainee(Long userId, String firstName, String lastName) {

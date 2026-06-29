@@ -112,8 +112,7 @@ class TraineeServiceImplTest {
 
         Optional<Trainee> result = traineeService.selectById(1L);
 
-        assertTrue(result.isPresent());
-        assertEquals(trainee, result.get());
+        assertEquals(Optional.of(trainee), result);
         verify(traineeDao).findById(1L);
     }
 
