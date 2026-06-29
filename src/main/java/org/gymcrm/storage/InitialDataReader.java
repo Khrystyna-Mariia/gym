@@ -1,5 +1,6 @@
 package org.gymcrm.storage;
 
+import org.gymcrm.exception.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
@@ -19,7 +20,7 @@ public class InitialDataReader {
         List<String> lines = new ArrayList<>();
 
         if (initialDataFile == null || !initialDataFile.exists()) {
-            throw new IllegalStateException("Initial data file was not found");
+            throw new ValidationException("Initial data file was not found");
         }
 
         try (BufferedReader reader = new BufferedReader(
@@ -37,7 +38,7 @@ public class InitialDataReader {
 
         } catch (Exception e) {
             logger.error("Cannot read initial data file", e);
-            throw new RuntimeException("Cannot read initial data file", e);
+            throw new ValidationException("Cannot read initial data file", e);
         }
 
         return lines;

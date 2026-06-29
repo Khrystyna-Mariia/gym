@@ -1,5 +1,6 @@
 package org.gymcrm.storage;
 
+import org.gymcrm.exception.ValidationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ByteArrayResource;
@@ -59,13 +60,13 @@ class InitialDataReaderTest {
 
     @Test
     void shouldThrowExceptionWhenResourceIsNull() {
-        assertThrows(IllegalStateException.class, () -> reader.readLines(null));
+        assertThrows(ValidationException.class, () -> reader.readLines(null));
     }
 
     @Test
     void shouldThrowExceptionWhenFileDoesNotExist() {
         Resource resource = new ClassPathResource("not-existing-initial-data.txt");
 
-        assertThrows(IllegalStateException.class, () -> reader.readLines(resource));
+        assertThrows(ValidationException.class, () -> reader.readLines(resource));
     }
 }

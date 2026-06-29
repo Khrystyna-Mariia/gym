@@ -1,5 +1,6 @@
 package org.gymcrm.storage;
 
+import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.Training;
@@ -114,7 +115,7 @@ class InitialDataParserTest {
     void shouldThrowExceptionWhenTrainingTypeHasInvalidFieldCount() {
         String[] parts = {"TRAINING_TYPE", "1"};
 
-        assertThrows(IllegalArgumentException.class, () -> parser.parseTrainingType(parts));
+        assertThrows(ValidationException.class, () -> parser.parseTrainingType(parts));
     }
 
     @Test
@@ -131,7 +132,7 @@ class InitialDataParserTest {
                 "Kyiv"
         };
 
-        assertThrows(IllegalArgumentException.class, () -> parser.parseTrainee(parts));
+        assertThrows(ValidationException.class, () -> parser.parseTrainee(parts));
     }
 
     @Test
@@ -148,7 +149,7 @@ class InitialDataParserTest {
                 "Kyiv"
         };
 
-        assertThrows(IllegalArgumentException.class, () -> parser.parseTrainee(parts));
+        assertThrows(ValidationException.class, () -> parser.parseTrainee(parts));
     }
 
     @Test
@@ -164,7 +165,7 @@ class InitialDataParserTest {
                 "60"
         };
 
-        assertThrows(IllegalArgumentException.class, () -> parser.parseTraining(parts));
+        assertThrows(ValidationException.class, () -> parser.parseTraining(parts));
     }
 
     @Test
@@ -180,7 +181,7 @@ class InitialDataParserTest {
                 "sixty"
         };
 
-        assertThrows(IllegalArgumentException.class, () -> parser.parseTraining(parts));
+        assertThrows(ValidationException.class, () -> parser.parseTraining(parts));
     }
 
     @Test
@@ -197,7 +198,7 @@ class InitialDataParserTest {
                 "Kyiv"
         };
 
-        assertThrows(IllegalArgumentException.class, () -> parser.parseTrainee(parts));
+        assertThrows(ValidationException.class, () -> parser.parseTrainee(parts));
     }
 
     @Test
@@ -213,6 +214,6 @@ class InitialDataParserTest {
                 "99"
         };
 
-        assertThrows(IllegalStateException.class, () -> parser.parseTrainer(parts, trainingTypeStorage));
+        assertThrows(ValidationException.class, () -> parser.parseTrainer(parts, trainingTypeStorage));
     }
 }

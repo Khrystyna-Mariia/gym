@@ -1,5 +1,6 @@
 package org.gymcrm.storage;
 
+import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.Training;
@@ -52,7 +53,7 @@ public class InitialDataParser {
         TrainingType specialization = trainingTypeStorage.get(specializationId);
 
         if (specialization == null) {
-            throw new IllegalStateException("Training type with id " + specializationId
+            throw new ValidationException("Training type with id " + specializationId
                     + " was not found for trainer " + user.firstName() + " " + user.lastName());
         }
 
@@ -94,7 +95,7 @@ public class InitialDataParser {
 
     private void validateFieldCount(String[] parts, int expectedFieldCount, String recordType) {
         if (parts == null || parts.length != expectedFieldCount) {
-            throw new IllegalArgumentException(String.format(
+            throw new ValidationException(String.format(
                     "Malformed data for %s. Expected %d fields, but got %d",
                     recordType,
                     expectedFieldCount,
@@ -105,7 +106,7 @@ public class InitialDataParser {
 
     private String required(String value, String fieldName) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("Required field is empty: " + fieldName);
+            throw new ValidationException("Required field is empty: " + fieldName);
         }
 
         return value.trim();
@@ -115,7 +116,7 @@ public class InitialDataParser {
         try {
             return Long.parseLong(required(value, fieldName));
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid long value for field " + fieldName + ": " + value, e);
+            throw new ValidationException("Invalid long value for field " + fieldName + ": " + value, e);
         }
     }
 
@@ -123,7 +124,7 @@ public class InitialDataParser {
         try {
             return Integer.parseInt(required(value, fieldName));
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid integer value for field " + fieldName + ": " + value, e);
+            throw new ValidationException("Invalid integer value for field " + fieldName + ": " + value, e);
         }
     }
 
@@ -131,7 +132,7 @@ public class InitialDataParser {
         try {
             return LocalDate.parse(required(value, fieldName));
         } catch (DateTimeParseException e) {
-            throw new IllegalArgumentException("Invalid date value for field " + fieldName + ": " + value, e);
+            throw new ValidationException("Invalid date value for field " + fieldName + ": " + value, e);
         }
     }
 
@@ -139,7 +140,7 @@ public class InitialDataParser {
         String normalizedValue = required(value, fieldName).toLowerCase();
 
         if (!normalizedValue.equals("true") && !normalizedValue.equals("false")) {
-            throw new IllegalArgumentException("Invalid boolean value for field " + fieldName + ": " + value);
+            throw new ValidationException("Invalid boolean value for field " + fieldName + ": " + value);
         }
 
         return Boolean.parseBoolean(normalizedValue);
