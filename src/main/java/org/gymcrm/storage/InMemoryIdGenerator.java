@@ -2,26 +2,42 @@ package org.gymcrm.storage;
 
 import org.springframework.stereotype.Component;
 
-import java.util.Collection;
-import java.util.Objects;
-import java.util.function.Function;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Component
 public class InMemoryIdGenerator {
 
-    public <T> Long generateNextId(Collection<T> items, Function<T, Long> idExtractor) {
-        if (items == null) {
-            throw new IllegalArgumentException("Items collection must not be null");
-        }
+    private final AtomicLong traineeCounter = new AtomicLong(0);
+    private final AtomicLong trainerCounter = new AtomicLong(0);
+    private final AtomicLong trainingCounter = new AtomicLong(0);
 
-        if (idExtractor == null) {
-            throw new IllegalArgumentException("Id extractor must not be null");
-        }
+    public Long generateNextTraineeId() {
+        return traineeCounter.incrementAndGet();
+    }
 
-        return items.stream()
-                .map(idExtractor)
-                .filter(Objects::nonNull)
-                .max(Long::compareTo)
-                .orElse(0L) + 1;
+    public Long generateNextTrainerId() {
+        return trainerCounter.incrementAndGet();
+    }
+
+    public Long generateNextTrainingId() {
+        return trainingCounter.incrementAndGet();
+    }
+
+    public void initializeMaxTraineeId(Long maxId) {
+        updateCounterIfGreater(traineeCounter, maxId);
+    }
+
+    public void initializeMaxTrainerId(Long maxId) {
+        updateCounterIfGreater(trainerCounter, maxId);
+    }
+
+    public void initializeMaxTrainingId(Long maxId) {
+        updateCounterIfGreater(trainingCounter, maxId);
+    }
+
+    private void updateCounterIfGreater(AtomicLong counter, Long value) {
+        if (value != null) {
+            counter.updateAndGet(current -> Math.max(current, value));
+        }
     }
 }

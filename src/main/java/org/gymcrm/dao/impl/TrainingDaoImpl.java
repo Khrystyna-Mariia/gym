@@ -34,7 +34,7 @@ public class TrainingDaoImpl implements TrainingDao {
     @Override
     public Training save(Training training) {
         if (training.getId() == null) {
-            Long generatedId = idGenerator.generateNextId(trainingStorage.values(), Training::getId);
+            Long generatedId = idGenerator.generateNextTrainingId();
             training.setId(generatedId);
             logger.debug("Generated training id {}", generatedId);
         }

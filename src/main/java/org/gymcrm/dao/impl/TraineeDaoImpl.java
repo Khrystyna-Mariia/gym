@@ -33,7 +33,7 @@ public class TraineeDaoImpl implements TraineeDao {
     @Override
     public Trainee save(Trainee trainee) {
         if (trainee.getUserId() == null) {
-            Long generatedId = idGenerator.generateNextId(traineeStorage.values(), Trainee::getUserId);
+            Long generatedId = idGenerator.generateNextTraineeId();
             trainee.setUserId(generatedId);
             logger.debug("Generated trainee id {}", generatedId);
         }

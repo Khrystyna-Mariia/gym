@@ -16,14 +16,16 @@ import static org.junit.jupiter.api.Assertions.*;
 class TrainingDaoImplTest {
     private TrainingDaoImpl trainingDao;
     private Map<Long, Training> trainingStorage;
+    private InMemoryIdGenerator idGenerator;
 
     @BeforeEach
     void setUp() {
         trainingStorage = new HashMap<>();
+        idGenerator = new InMemoryIdGenerator();
 
         trainingDao = new TrainingDaoImpl();
         trainingDao.setTrainingStorage(trainingStorage);
-        trainingDao.setIdGenerator(new InMemoryIdGenerator());
+        trainingDao.setIdGenerator(idGenerator);
     }
 
     @Test
@@ -41,6 +43,7 @@ class TrainingDaoImplTest {
     void shouldGenerateIdWhenSavingTrainingWithoutId() {
         Training existingTraining = createTraining(5L, "Morning Fitness");
         trainingStorage.put(5L, existingTraining);
+        idGenerator.initializeMaxTrainingId(existingTraining.getId());
 
         Training newTraining = createTraining(null, "Evening Yoga");
 
