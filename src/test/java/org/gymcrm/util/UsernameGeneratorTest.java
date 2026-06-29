@@ -19,7 +19,7 @@ class UsernameGeneratorTest {
     void shouldGenerateUsernameWithoutSuffixWhenUsernameDoesNotExist(){
         Set<String> existingUsernames = Set.of("Anna.Brown", "Michael.Green");
 
-        String result = usernameGenerator.generate("John", "Smith", existingUsernames);
+        String result = usernameGenerator.generate("John", "Smith", existingUsernames::contains);
 
         assertEquals("John.Smith", result);
     }
@@ -28,7 +28,7 @@ class UsernameGeneratorTest {
     void shouldGenerateUsernameWithSuffixWhenBaseUsernameAlreadyExists() {
         Set<String> existingUsernames = Set.of("John.Smith");
 
-        String result = usernameGenerator.generate("John", "Smith", existingUsernames);
+        String result = usernameGenerator.generate("John", "Smith", existingUsernames::contains);
 
         assertEquals("John.Smith1", result);
     }
@@ -41,7 +41,7 @@ class UsernameGeneratorTest {
                 "John.Smith2"
         );
 
-        String result = usernameGenerator.generate("John", "Smith", existingUsernames);
+        String result = usernameGenerator.generate("John", "Smith", existingUsernames::contains);
 
         assertEquals("John.Smith3", result);
     }

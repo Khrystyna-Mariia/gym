@@ -70,4 +70,11 @@ public class TrainerDaoImpl implements TrainerDao {
         logger.debug("Finding all trainers");
         return new ArrayList<>(trainerStorage.values());
     }
+
+    @Override
+    public boolean existsByUsername(String username) {
+        logger.debug("Checking if trainer username {} exists", username);
+        return trainerStorage.values().stream()
+                .anyMatch(trainer -> username.equalsIgnoreCase(trainer.getUsername()));
+    }
 }

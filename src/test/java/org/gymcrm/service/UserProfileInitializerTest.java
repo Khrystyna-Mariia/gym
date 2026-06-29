@@ -15,8 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Set;
+import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -49,17 +48,11 @@ class UserProfileInitializerTest {
 
     @Test
     void shouldInitializeTraineeProfileWithUsernamePasswordAndActiveStatus() {
-        Trainee existingTrainee = createTrainee(1L, "John", "Smith", "John.Smith");
-        Trainee traineeWithoutUsername = createTrainee(2L, "Anna", "Brown", null);
-        Trainer existingTrainer = createTrainer(1L, "Michael", "Green", "Michael.Green");
-
         Trainee newTrainee = createTrainee(null, "John", "Smith", null);
         newTrainee.setPassword(null);
         newTrainee.setActive(false);
 
-        when(traineeDao.findAll()).thenReturn(List.of(existingTrainee, traineeWithoutUsername));
-        when(trainerDao.findAll()).thenReturn(List.of(existingTrainer));
-        when(usernameGenerator.generate(eq("John"), eq("Smith"), anySet())).thenReturn("John.Smith1");
+        when(usernameGenerator.generate(eq("John"), eq("Smith"), any())).thenReturn("John.Smith1");
         when(passwordGenerator.generate()).thenReturn("Generated1");
 
         userProfileInitializer.initialize(newTrainee);
@@ -68,22 +61,20 @@ class UserProfileInitializerTest {
         assertEquals("Generated1", newTrainee.getPassword());
         assertTrue(newTrainee.isActive());
 
-        verify(usernameGenerator).generate(eq("John"), eq("Smith"), anySet());
+        verify(usernameGenerator).generate(eq("John"), eq("Smith"), any());
         verify(passwordGenerator).generate();
+
+        verify(traineeDao, never()).findAll();
+        verify(trainerDao, never()).findAll();
     }
 
     @Test
     void shouldInitializeTrainerProfileWithUsernamePasswordAndActiveStatus() {
-        Trainee existingTrainee = createTrainee(1L, "John", "Smith", "John.Smith");
-        Trainer existingTrainer = createTrainer(1L, "Michael", "Green", "Michael.Green");
-
         Trainer newTrainer = createTrainer(null, "John", "Smith", null);
         newTrainer.setPassword(null);
         newTrainer.setActive(false);
 
-        when(traineeDao.findAll()).thenReturn(List.of(existingTrainee));
-        when(trainerDao.findAll()).thenReturn(List.of(existingTrainer));
-        when(usernameGenerator.generate(eq("John"), eq("Smith"), anySet())).thenReturn("John.Smith1");
+        when(usernameGenerator.generate(eq("John"), eq("Smith"), any())).thenReturn("John.Smith1");
         when(passwordGenerator.generate()).thenReturn("Generated1");
 
         userProfileInitializer.initialize(newTrainer);
@@ -92,36 +83,46 @@ class UserProfileInitializerTest {
         assertEquals("Generated1", newTrainer.getPassword());
         assertTrue(newTrainer.isActive());
 
-        verify(usernameGenerator).generate(eq("John"), eq("Smith"), anySet());
+        verify(usernameGenerator).generate(eq("John"), eq("Smith"), any());
         verify(passwordGenerator).generate();
+
+        verify(traineeDao, never()).findAll();
+        verify(trainerDao, never()).findAll();
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void shouldPassAllExistingUsernamesToUsernameGenerator() {
-        Trainee existingTrainee = createTrainee(1L, "John", "Smith", "John.Smith");
-        Trainee traineeWithoutUsername = createTrainee(2L, "Anna", "Brown", null);
-        Trainer existingTrainer = createTrainer(1L, "Michael", "Green", "Michael.Green");
-
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void shouldPassUsernameExistencePredicateToUsernameGenerator() {
         Trainee newTrainee = createTrainee(null, "Olivia", "White", null);
 
-        when(traineeDao.findAll()).thenReturn(List.of(existingTrainee, traineeWithoutUsername));
-        when(trainerDao.findAll()).thenReturn(List.of(existingTrainer));
-        when(usernameGenerator.generate(eq("Olivia"), eq("White"), anySet())).thenReturn("Olivia.White");
+        when(usernameGenerator.generate(eq("Olivia"), eq("White"), any())).thenReturn("Olivia.White");
         when(passwordGenerator.generate()).thenReturn("Generated1");
 
         userProfileInitializer.initialize(newTrainee);
 
-        ArgumentCaptor<Set<String>> usernamesCaptor = ArgumentCaptor.forClass(Set.class);
+        ArgumentCaptor<Predicate<String>> predicateCaptor =
+                ArgumentCaptor.forClass((Class) Predicate.class);
 
-        verify(usernameGenerator).generate(eq("Olivia"), eq("White"), usernamesCaptor.capture());
+        verify(usernameGenerator).generate(eq("Olivia"), eq("White"), predicateCaptor.capture());
 
-        Set<String> capturedUsernames = usernamesCaptor.getValue();
+        Predicate<String> usernameExists = predicateCaptor.getValue();
 
-        assertTrue(capturedUsernames.contains("John.Smith"));
-        assertTrue(capturedUsernames.contains("Michael.Green"));
-        assertFalse(capturedUsernames.contains(null));
-        assertEquals(2, capturedUsernames.size());
+        when(traineeDao.existsByUsername("John.Smith")).thenReturn(true);
+        assertTrue(usernameExists.test("John.Smith"));
+        verify(traineeDao).existsByUsername("John.Smith");
+        verify(trainerDao, never()).existsByUsername("John.Smith");
+
+        when(traineeDao.existsByUsername("Michael.Green")).thenReturn(false);
+        when(trainerDao.existsByUsername("Michael.Green")).thenReturn(true);
+        assertTrue(usernameExists.test("Michael.Green"));
+        verify(traineeDao).existsByUsername("Michael.Green");
+        verify(trainerDao).existsByUsername("Michael.Green");
+
+        when(traineeDao.existsByUsername("Anna.Brown")).thenReturn(false);
+        when(trainerDao.existsByUsername("Anna.Brown")).thenReturn(false);
+        assertFalse(usernameExists.test("Anna.Brown"));
+        verify(traineeDao).existsByUsername("Anna.Brown");
+        verify(trainerDao).existsByUsername("Anna.Brown");
     }
 
     @Test

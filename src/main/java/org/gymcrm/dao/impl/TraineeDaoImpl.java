@@ -90,4 +90,11 @@ public class TraineeDaoImpl implements TraineeDao {
         return new ArrayList<>(traineeStorage.values());
     }
 
+    @Override
+    public boolean existsByUsername(String username) {
+        logger.debug("Checking if trainee username {} exists", username);
+        return traineeStorage.values().stream()
+                .anyMatch(trainee -> username.equalsIgnoreCase(trainee.getUsername()));
+    }
+
 }

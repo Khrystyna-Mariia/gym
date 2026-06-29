@@ -13,4 +13,6 @@ public interface TrainerDao {
     Optional<Trainer> findById(Long userId);
 
     List<Trainer> findAll();
+
+    boolean existsByUsername(String username);
 }
