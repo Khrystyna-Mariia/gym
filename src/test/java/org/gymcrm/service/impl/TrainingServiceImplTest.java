@@ -1,12 +1,12 @@
 package org.gymcrm.service.impl;
 
-import org.gymcrm.dao.TraineeDao;
-import org.gymcrm.dao.TrainerDao;
 import org.gymcrm.dao.TrainingDao;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.Training;
 import org.gymcrm.model.TrainingType;
+import org.gymcrm.service.TraineeService;
+import org.gymcrm.service.TrainerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,14 +28,14 @@ class TrainingServiceImplTest {
     private TrainingDao trainingDao;
 
     @Mock
-    private TraineeDao traineeDao;
+    private TraineeService traineeService;
 
     @Mock
-    private TrainerDao trainerDao;
+    private TrainerService trainerService;
 
     @BeforeEach
     void setUp() {
-        trainingService = new TrainingServiceImpl(trainingDao, traineeDao, trainerDao);
+        trainingService = new TrainingServiceImpl(trainingDao, traineeService, trainerService);
     }
 
     @Test
@@ -43,8 +43,8 @@ class TrainingServiceImplTest {
         Training newTraining = createTraining(null, "Evening Yoga");
         Training savedTraining = createTraining(2L, "Evening Yoga");
 
-        when(traineeDao.findById(1L)).thenReturn(Optional.of(createTrainee()));
-        when(trainerDao.findById(1L)).thenReturn(Optional.of(createTrainer()));
+        when(traineeService.selectById(1L)).thenReturn(Optional.of(createTrainee()));
+        when(trainerService.selectById(1L)).thenReturn(Optional.of(createTrainer()));
         when(trainingDao.save(newTraining)).thenReturn(savedTraining);
 
         Training result = trainingService.create(newTraining);
@@ -52,8 +52,8 @@ class TrainingServiceImplTest {
         assertEquals(2L, result.getId());
         assertEquals("Evening Yoga", result.getTrainingName());
 
-        verify(traineeDao).findById(1L);
-        verify(trainerDao).findById(1L);
+        verify(traineeService).selectById(1L);
+        verify(trainerService).selectById(1L);
         verify(trainingDao).save(newTraining);
     }
 
@@ -62,20 +62,20 @@ class TrainingServiceImplTest {
         assertThrows(IllegalArgumentException.class, () -> trainingService.create(null));
 
         verifyNoInteractions(trainingDao);
-        verifyNoInteractions(traineeDao);
-        verifyNoInteractions(trainerDao);
+        verifyNoInteractions(traineeService);
+        verifyNoInteractions(trainerService);
     }
 
     @Test
     void shouldThrowExceptionWhenTraineeDoesNotExist() {
         Training training = createTraining(null, "Evening Yoga");
 
-        when(traineeDao.findById(1L)).thenReturn(Optional.empty());
+        when(traineeService.selectById(1L)).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class, () -> trainingService.create(training));
 
-        verify(traineeDao).findById(1L);
-        verifyNoInteractions(trainerDao);
+        verify(traineeService).selectById(1L);
+        verifyNoInteractions(trainerService);
         verifyNoInteractions(trainingDao);
     }
 
@@ -83,13 +83,13 @@ class TrainingServiceImplTest {
     void shouldThrowExceptionWhenTrainerDoesNotExist() {
         Training training = createTraining(null, "Evening Yoga");
 
-        when(traineeDao.findById(1L)).thenReturn(Optional.of(createTrainee()));
-        when(trainerDao.findById(1L)).thenReturn(Optional.empty());
+        when(traineeService.selectById(1L)).thenReturn(Optional.of(createTrainee()));
+        when(trainerService.selectById(1L)).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class, () -> trainingService.create(training));
 
-        verify(traineeDao).findById(1L);
-        verify(trainerDao).findById(1L);
+        verify(traineeService).selectById(1L);
+        verify(trainerService).selectById(1L);
         verifyNoInteractions(trainingDao);
     }
 

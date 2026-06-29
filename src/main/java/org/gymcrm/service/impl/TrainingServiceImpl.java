@@ -1,9 +1,9 @@
 package org.gymcrm.service.impl;
 
-import org.gymcrm.dao.TraineeDao;
-import org.gymcrm.dao.TrainerDao;
 import org.gymcrm.dao.TrainingDao;
 import org.gymcrm.model.Training;
+import org.gymcrm.service.TraineeService;
+import org.gymcrm.service.TrainerService;
 import org.gymcrm.service.TrainingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,13 +17,13 @@ public class TrainingServiceImpl implements TrainingService {
     private static final Logger logger = LoggerFactory.getLogger(TrainingServiceImpl.class);
 
     private final TrainingDao trainingDao;
-    private final TraineeDao traineeDao;
-    private final TrainerDao trainerDao;
+    private final TraineeService traineeService;
+    private final TrainerService trainerService;
 
-    public TrainingServiceImpl(TrainingDao trainingDao, TraineeDao traineeDao, TrainerDao trainerDao) {
+    public TrainingServiceImpl(TrainingDao trainingDao, TraineeService traineeService, TrainerService trainerService) {
         this.trainingDao = trainingDao;
-        this.traineeDao = traineeDao;
-        this.trainerDao = trainerDao;
+        this.traineeService = traineeService;
+        this.trainerService = trainerService;
     }
 
     @Override
@@ -33,12 +33,12 @@ public class TrainingServiceImpl implements TrainingService {
             throw new IllegalArgumentException("Training must not be null");
         }
 
-        if (training.getTraineeId() == null || traineeDao.findById(training.getTraineeId()).isEmpty()) {
+        if (training.getTraineeId() == null || traineeService.selectById(training.getTraineeId()).isEmpty()) {
             logger.warn("Failed to create training: trainee with id {} does not exist", training.getTraineeId());
             throw new IllegalArgumentException("Trainee with id " + training.getTraineeId() + " does not exist");
         }
 
-        if (training.getTrainerId() == null || trainerDao.findById(training.getTrainerId()).isEmpty()) {
+        if (training.getTrainerId() == null || trainerService.selectById(training.getTrainerId()).isEmpty()) {
             logger.warn("Failed to create training: trainer with id {} does not exist", training.getTrainerId());
             throw new IllegalArgumentException("Trainer with id " + training.getTrainerId() + " does not exist");
         }
