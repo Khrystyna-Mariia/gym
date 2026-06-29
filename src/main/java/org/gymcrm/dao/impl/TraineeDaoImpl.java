@@ -4,7 +4,6 @@ import org.gymcrm.dao.TraineeDao;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.storage.InMemoryIdGenerator;
 import org.slf4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
@@ -17,16 +16,14 @@ import java.util.Optional;
 public class TraineeDaoImpl implements TraineeDao {
     private static final Logger logger = org.slf4j.LoggerFactory.getLogger(TraineeDaoImpl.class);
 
-    private Map<Long, Trainee> traineeStorage;
-    private InMemoryIdGenerator idGenerator;
+    private final Map<Long, Trainee> traineeStorage;
+    private final InMemoryIdGenerator idGenerator;
 
-    @Autowired
-    public void setTraineeStorage(@Qualifier("traineeStorage") Map<Long, Trainee> traineeStorage) {
+    public TraineeDaoImpl(
+            @Qualifier("traineeStorage") Map<Long, Trainee> traineeStorage,
+            InMemoryIdGenerator idGenerator
+    ) {
         this.traineeStorage = traineeStorage;
-    }
-
-    @Autowired
-    public void setIdGenerator(InMemoryIdGenerator idGenerator) {
         this.idGenerator = idGenerator;
     }
 
@@ -36,7 +33,10 @@ public class TraineeDaoImpl implements TraineeDao {
             Long generatedId = idGenerator.generateNextTraineeId();
             trainee.setUserId(generatedId);
             logger.debug("Generated trainee id {}", generatedId);
+        } else {
+            idGenerator.initializeMaxTraineeId(trainee.getUserId());
         }
+
 
         logger.debug("Saving trainee with id {}", trainee.getUserId());
         traineeStorage.put(trainee.getUserId(), trainee);

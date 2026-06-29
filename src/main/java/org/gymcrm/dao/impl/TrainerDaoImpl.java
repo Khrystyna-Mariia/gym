@@ -5,7 +5,6 @@ import org.gymcrm.model.Trainer;
 import org.gymcrm.storage.InMemoryIdGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
@@ -18,17 +17,15 @@ import java.util.Optional;
 public class TrainerDaoImpl implements TrainerDao {
     private static final Logger logger = LoggerFactory.getLogger(TrainerDaoImpl.class);
 
-    private Map<Long, Trainer> trainerStorage;
-    private InMemoryIdGenerator idGenerator;
+    private final Map<Long, Trainer> trainerStorage;
+    private final InMemoryIdGenerator idGenerator;
 
-    @Autowired
-    public void setIdGenerator(InMemoryIdGenerator idGenerator) {
-        this.idGenerator = idGenerator;
-    }
-
-    @Autowired
-    public void setTrainerStorage(@Qualifier("trainerStorage") Map<Long, Trainer> trainerStorage) {
+    public TrainerDaoImpl(
+            @Qualifier("trainerStorage") Map<Long, Trainer> trainerStorage,
+            InMemoryIdGenerator idGenerator
+    ) {
         this.trainerStorage = trainerStorage;
+        this.idGenerator = idGenerator;
     }
 
     @Override

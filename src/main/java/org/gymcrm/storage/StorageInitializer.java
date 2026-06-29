@@ -22,8 +22,7 @@ public class StorageInitializer {
     private final InitialDataReader initialDataReader;
     private final InitialDataParser initialDataParser;
     private final InMemoryIdGenerator idGenerator;
-
-    private Resource initialDataFile;
+    private final Resource initialDataFile;
 
     private final Map<Long, Trainee> traineeStorage;
     private final Map<Long, Trainer> trainerStorage;
@@ -34,22 +33,20 @@ public class StorageInitializer {
             InitialDataReader initialDataReader,
             InitialDataParser initialDataParser,
             InMemoryIdGenerator idGenerator,
+            @Value("${initial.data.file}") Resource initialDataFile,
             @Qualifier("traineeStorage") Map<Long, Trainee> traineeStorage,
             @Qualifier("trainerStorage") Map<Long, Trainer> trainerStorage,
             @Qualifier("trainingStorage") Map<Long, Training> trainingStorage,
-            @Qualifier("trainingTypeStorage") Map<Long, TrainingType> trainingTypeStorage) {
+            @Qualifier("trainingTypeStorage") Map<Long, TrainingType> trainingTypeStorage
+    ) {
         this.initialDataReader = initialDataReader;
         this.initialDataParser = initialDataParser;
         this.idGenerator = idGenerator;
+        this.initialDataFile = initialDataFile;
         this.traineeStorage = traineeStorage;
         this.trainerStorage = trainerStorage;
         this.trainingStorage = trainingStorage;
         this.trainingTypeStorage = trainingTypeStorage;
-    }
-
-    @Value("${initial.data.file}")
-    public void setInitialDataFile(Resource initialDataFile) {
-        this.initialDataFile = initialDataFile;
     }
 
     @PostConstruct

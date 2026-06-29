@@ -23,9 +23,7 @@ class TrainerDaoImplTest {
         trainerStorage = new HashMap<>();
         idGenerator = new InMemoryIdGenerator();
 
-        trainerDao = new TrainerDaoImpl();
-        trainerDao.setTrainerStorage(trainerStorage);
-        trainerDao.setIdGenerator(idGenerator);
+        trainerDao = new TrainerDaoImpl(trainerStorage, idGenerator);
     }
 
     @Test

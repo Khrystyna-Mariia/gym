@@ -23,9 +23,7 @@ class TraineeDaoImplTest {
         traineeStorage = new HashMap<>();
         idGenerator = new InMemoryIdGenerator();
 
-        traineeDao = new TraineeDaoImpl();
-        traineeDao.setTraineeStorage(traineeStorage);
-        traineeDao.setIdGenerator(idGenerator);
+        traineeDao = new TraineeDaoImpl(traineeStorage, idGenerator);
     }
 
     @Test
