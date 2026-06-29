@@ -45,29 +45,16 @@ public class TrainingServiceImpl implements TrainingService {
             throw new EntityNotFoundException("Trainer with id " + training.getTrainerId() + " does not exist");
         }
 
-        logger.info("Creating training profile with name {}", training.getTrainingName());
-        Training savedTraining = trainingDao.save(training);
-        logger.info("Training profile created successfully with id {}", savedTraining.getId());
-
-        return savedTraining;
+        return trainingDao.save(training);
     }
 
     @Override
     public Optional<Training> selectById(Long id) {
-        logger.info("Selecting training profile with id {}", id);
-
-        Optional<Training> training = trainingDao.findById(id);
-
-        if (training.isEmpty()) {
-            logger.warn("Training profile with id {} was not found", id);
-        }
-
-        return training;
+        return trainingDao.findById(id);
     }
 
     @Override
     public List<Training> selectAll() {
-        logger.info("Selecting all training profiles");
         return trainingDao.findAll();
     }
 }

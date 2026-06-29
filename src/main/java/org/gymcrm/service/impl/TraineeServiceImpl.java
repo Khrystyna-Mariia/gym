@@ -31,49 +31,31 @@ public class TraineeServiceImpl implements TraineeService {
             throw new ValidationException("Trainee must not be null");
         }
 
-        logger.info("Creating trainee profile for {} {}", trainee.getFirstName(), trainee.getLastName());
         userProfileInitializer.initialize(trainee);
-
-        Trainee savedTrainee = traineeDao.save(trainee);
-        logger.info("Trainee profile created successfully with id {}", savedTrainee.getUserId());
-        return savedTrainee;
+        return traineeDao.save(trainee);
     }
 
     @Override
     public Trainee update(Trainee trainee) {
-        logger.info("Updating trainee profile with id {}", trainee.getUserId());
         return traineeDao.update(trainee);
     }
 
     @Override
     public void delete(Long userId) {
-        logger.info("Deleting trainee profile with id {}", userId);
-
         boolean deleted = traineeDao.deleteById(userId);
 
-        if (deleted) {
-            logger.info("Trainee profile with id {} deleted successfully", userId);
-        } else {
+        if (!deleted) {
             logger.warn("Trainee profile with id {} was not found and was not deleted", userId);
         }
     }
 
     @Override
     public Optional<Trainee> selectById(Long userId) {
-        logger.info("Selecting trainee profile with id {}", userId);
-
-        Optional<Trainee> trainee = traineeDao.findById(userId);
-
-        if (trainee.isEmpty()) {
-            logger.warn("Trainee profile with id {} was not found", userId);
-        }
-
-        return trainee;
+        return traineeDao.findById(userId);
     }
 
     @Override
     public List<Trainee> selectAll() {
-        logger.info("Selecting all trainee profiles");
         return traineeDao.findAll();
     }
 }

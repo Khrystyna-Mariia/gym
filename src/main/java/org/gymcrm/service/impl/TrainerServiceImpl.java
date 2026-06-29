@@ -31,31 +31,22 @@ public class TrainerServiceImpl implements TrainerService {
             throw new ValidationException("Trainer must not be null");
         }
 
-        logger.info("Creating trainer profile for {} {}", trainer.getFirstName(), trainer.getLastName());
-
         userProfileInitializer.initialize(trainer);
-
-        Trainer savedTrainer = trainerDao.save(trainer);
-        logger.info("Trainer profile created successfully with id {}", savedTrainer.getUserId());
-
-        return savedTrainer;
+        return trainerDao.save(trainer);
     }
 
     @Override
     public Trainer update(Trainer trainer) {
-        logger.info("Updating trainer profile with id {}", trainer.getUserId());
         return trainerDao.update(trainer);
     }
 
     @Override
     public Optional<Trainer> selectById(Long userId) {
-        logger.info("Selecting trainer profile with id {}", userId);
         return trainerDao.findById(userId);
     }
 
     @Override
     public List<Trainer> selectAll() {
-        logger.info("Selecting all trainer profiles");
         return trainerDao.findAll();
     }
 }
