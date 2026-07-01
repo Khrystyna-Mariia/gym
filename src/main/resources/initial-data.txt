@@ -1,0 +1,12 @@
+TRAINING_TYPE;1;Fitness
+TRAINING_TYPE;2;Yoga
+TRAINING_TYPE;3;Strength
+
+TRAINEE;1;Alex;Gomez;Alex.Gomez;password123;true;2000-05-15;Kyiv
+TRAINEE;2;Emma;Watson;Emma.Watson;password456;true;1999-09-20;Lviv
+
+TRAINER;1;David;Miller;David.Miller;password789;true;1
+TRAINER;2;Sophia;Taylor;Sophia.Taylor;password000;true;2
+
+TRAINING;1;1;1;Morning Fitness;1;2026-06-23;60
+TRAINING;2;2;2;Evening Yoga;2;2026-06-24;45
