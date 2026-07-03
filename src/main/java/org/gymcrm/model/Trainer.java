@@ -1,22 +1,41 @@
 package org.gymcrm.model;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import jakarta.persistence.*;
+import lombok.*;
 
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Table(name = "trainers")
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(callSuper = true)
-public class Trainer extends User {
-    private Long userId;
+@AllArgsConstructor
+public class Trainer {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "specialization_id", nullable = false)
     private TrainingType specialization;
 
-    public Trainer(Long userId, String firstName, String lastName, String username, String password, boolean isActive, TrainingType specialization) {
-        super(firstName, lastName, username, password, isActive);
-        this.userId = userId;
-        this.specialization = specialization;
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @ManyToMany(mappedBy = "trainers", fetch = FetchType.LAZY)
+    private Set<Trainee> trainees = new HashSet<>();
+
+    @Override
+    public String toString() {
+        return "Trainer{" +
+                "id=" + id +
+                ", specialization=" + (specialization != null ? specialization.getTrainingTypeName() : "null") +
+                ", user=" + user +
+                '}';
     }
 
 }

@@ -1,14 +1,21 @@
 package org.gymcrm.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
+import lombok.*;
 
-@Data
+@Entity
+@Table(name = "training_type")
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class TrainingType {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "training_type_name", nullable = false)
     private String trainingTypeName;
 
 }
