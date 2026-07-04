@@ -4,6 +4,7 @@ import org.gymcrm.dao.TrainerDao;
 import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.TrainingType;
+import org.gymcrm.model.User;
 import org.gymcrm.service.UserProfileInitializer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,44 +35,32 @@ class TrainerServiceImplTest {
 
     @Test
     void shouldCreateTrainerUsingInitializerAndDao() {
-        Trainer newTrainer = new Trainer(
-                null,
-                "John",
-                "Smith",
-                null,
-                null,
-                false,
-                new TrainingType(3L, "Strength")
-        );
+        Trainer newTrainer = createTrainer(null, "John", "Smith", null);
+        newTrainer.getUser().setPassword(null);
+        newTrainer.getUser().setActive(false);
 
-        Trainer savedTrainer = new Trainer(
-                2L,
-                "John",
-                "Smith",
-                "John.Smith1",
-                "Generated1",
-                true,
-                new TrainingType(3L, "Strength")
-        );
+        Trainer savedTrainer = createTrainer(2L, "John", "Smith", "John.Smith1");
+        savedTrainer.getUser().setPassword("Generated1");
+        savedTrainer.getUser().setActive(true);
 
         doAnswer(invocation -> {
-            Trainer trainer = invocation.getArgument(0);
-            trainer.setUsername("John.Smith1");
-            trainer.setPassword("Generated1");
-            trainer.setActive(true);
+            User user = invocation.getArgument(0);
+            user.setUsername("John.Smith1");
+            user.setPassword("Generated1");
+            user.setActive(true);
             return null;
-        }).when(userProfileInitializer).initialize(newTrainer);
+        }).when(userProfileInitializer).initialize(any(User.class));
 
         when(trainerDao.save(newTrainer)).thenReturn(savedTrainer);
 
         Trainer result = trainerService.create(newTrainer);
 
-        assertEquals(2L, result.getUserId());
-        assertEquals("John.Smith1", result.getUsername());
-        assertEquals("Generated1", result.getPassword());
-        assertTrue(result.isActive());
+        assertNotNull(result);
+        assertEquals(2L, result.getId());
+        assertEquals("John.Smith1", result.getUser().getUsername());
+        assertTrue(result.getUser().isActive());
 
-        verify(userProfileInitializer).initialize(newTrainer);
+        verify(userProfileInitializer).initialize(newTrainer.getUser());
         verify(trainerDao).save(newTrainer);
     }
 
@@ -81,6 +70,15 @@ class TrainerServiceImplTest {
 
         verifyNoInteractions(userProfileInitializer);
         verifyNoInteractions(trainerDao);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTrainerHasNullUser() {
+        Trainer trainerWithNoUser = new Trainer();
+        trainerWithNoUser.setUser(null);
+
+        assertThrows(ValidationException.class, () -> trainerService.create(trainerWithNoUser));
+        verifyNoInteractions(userProfileInitializer, trainerDao);
     }
 
     @Test
@@ -132,15 +130,36 @@ class TrainerServiceImplTest {
         verify(trainerDao).findAll();
     }
 
-    private Trainer createTrainer(Long userId, String firstName, String lastName, String username) {
-        return new Trainer(
-                userId,
-                firstName,
-                lastName,
-                username,
-                "password123",
-                true,
-                new TrainingType(1L, "Fitness")
-        );
+    @Test
+    void shouldSelectTrainerByUsername() {
+        String username = "michael.green";
+        Trainer trainer = createTrainer(1L, "Michael", "Green", username);
+        when(trainerDao.findByUsername(username)).thenReturn(Optional.of(trainer));
+
+        Optional<Trainer> result = trainerService.selectByUsername(username);
+
+        assertTrue(result.isPresent());
+        assertEquals(trainer, result.get());
+    }
+
+    @Test
+    void shouldGetUnassignedTrainers() {
+        String traineeUsername = "john.smith";
+        List<Trainer> unassigned = List.of(createTrainer(5L, "Coach", "Alex", "Coach.Alex"));
+        when(trainerDao.findTrainersNotAssignedToTrainee(traineeUsername)).thenReturn(unassigned);
+
+        List<Trainer> result = trainerService.getUnassignedTrainers(traineeUsername);
+
+        assertEquals(1, result.size());
+        verify(trainerDao).findTrainersNotAssignedToTrainee(traineeUsername);
+    }
+
+    private Trainer createTrainer(Long id, String firstName, String lastName, String username) {
+        User user = new User(id, firstName, lastName, username, "password123", true);
+        Trainer trainer = new Trainer();
+        trainer.setId(id);
+        trainer.setUser(user);
+        trainer.setSpecialization(new TrainingType(1L, "Fitness"));
+        return trainer;
     }
 }

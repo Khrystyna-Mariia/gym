@@ -18,6 +18,7 @@ public class InitialDataParser {
         validateFieldCount(parts, TRAINING_TYPE_FIELD_COUNT, "TRAINING_TYPE");
 
         TrainingType type = new TrainingType();
+        type.setId(parseLong(parts[1], "id"));
         type.setTrainingTypeName(required(parts[2], "training type name"));
         return type;
     }
@@ -48,6 +49,7 @@ public class InitialDataParser {
         validateFieldCount(parts, TRAINING_FIELD_COUNT, "TRAINING");
 
         Training training = new Training();
+        training.setId(parseLong(parts[1], "training id"));
         training.setTrainingName(required(parts[4], "training name"));
         training.setTrainingDate(parseDate(parts[6], "training date"));
         training.setTrainingDuration(parseInt(parts[7], "training duration"));

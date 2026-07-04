@@ -1,9 +1,6 @@
 package org.gymcrm.facade;
 
-import org.gymcrm.model.Trainee;
-import org.gymcrm.model.Trainer;
-import org.gymcrm.model.Training;
-import org.gymcrm.model.TrainingType;
+import org.gymcrm.model.*;
 import org.gymcrm.service.TraineeService;
 import org.gymcrm.service.TrainerService;
 import org.gymcrm.service.TrainingService;
@@ -39,41 +36,35 @@ class GymFacadeTest {
         gymFacade = new GymFacade(traineeService, trainerService, trainingService);
     }
 
-    private Trainee createTrainee(Long userId, String firstName, String lastName) {
-        return new Trainee(
-                userId,
-                firstName,
-                lastName,
-                firstName + "." + lastName,
-                "password123",
-                true,
-                LocalDate.of(2000, 1, 1),
-                "Kyiv"
-        );
+    private Trainee createTrainee(Long id, String firstName, String lastName) {
+        User user = new User(id, firstName, lastName, firstName + "." + lastName, "password123", true);
+        Trainee trainee = new Trainee();
+        trainee.setId(id);
+        trainee.setUser(user);
+        trainee.setDateOfBirth(LocalDate.of(2000, 1, 1));
+        trainee.setAddress("Kyiv");
+        return trainee;
     }
 
-    private Trainer createTrainer(Long userId, String firstName, String lastName) {
-        return new Trainer(
-                userId,
-                firstName,
-                lastName,
-                firstName + "." + lastName,
-                "password123",
-                true,
-                new TrainingType(1L, "Fitness")
-        );
+    private Trainer createTrainer(Long id, String firstName, String lastName) {
+        User user = new User(id, firstName, lastName, firstName + "." + lastName, "password123", true);
+        Trainer trainer = new Trainer();
+        trainer.setId(id);
+        trainer.setUser(user);
+        trainer.setSpecialization(new TrainingType(1L, "Fitness"));
+        return trainer;
     }
 
     private Training createTraining(Long id, String trainingName) {
-        return new Training(
-                id,
-                1L,
-                1L,
-                trainingName,
-                1L,
-                LocalDate.of(2026, 6, 24),
-                60
-        );
+        Training training = new Training();
+        training.setId(id);
+        training.setTrainingName(trainingName);
+        training.setTrainee(createTrainee(1L, "John", "Smith"));
+        training.setTrainer(createTrainer(1L, "Michael", "Green"));
+        training.setTrainingDate(LocalDate.of(2026, 6, 24));
+        training.setTrainingDuration(60);
+        training.setTrainingType(new TrainingType(1L, "Fitness"));
+        return training;
     }
 
     @Test
@@ -118,6 +109,19 @@ class GymFacadeTest {
         assertTrue(result.isPresent());
         assertEquals(trainee, result.get());
         verify(traineeService).selectById(1L);
+    }
+
+    @Test
+    void shouldGetTraineeByUsername() {
+        String username = "John.Smith";
+        Trainee trainee = createTrainee(1L, "John", "Smith");
+        when(traineeService.selectByUsername(username)).thenReturn(Optional.of(trainee));
+
+        Optional<Trainee> result = gymFacade.getTraineeByUsername(username);
+
+        assertTrue(result.isPresent());
+        assertEquals(trainee, result.get());
+        verify(traineeService).selectByUsername(username);
     }
 
     @Test
@@ -173,6 +177,19 @@ class GymFacadeTest {
     }
 
     @Test
+    void shouldGetTrainerByUsername() {
+        String username = "Michael.Green";
+        Trainer trainer = createTrainer(1L, "Michael", "Green");
+        when(trainerService.selectByUsername(username)).thenReturn(Optional.of(trainer));
+
+        Optional<Trainer> result = gymFacade.getTrainerByUsername(username);
+
+        assertTrue(result.isPresent());
+        assertEquals(trainer, result.get());
+        verify(trainerService).selectByUsername(username);
+    }
+
+    @Test
     void shouldGetAllTrainers() {
         Trainer firstTrainer = createTrainer(1L, "Michael", "Green");
         Trainer secondTrainer = createTrainer(2L, "Olivia", "White");
@@ -185,6 +202,18 @@ class GymFacadeTest {
         assertTrue(result.contains(firstTrainer));
         assertTrue(result.contains(secondTrainer));
         verify(trainerService).selectAll();
+    }
+
+    @Test
+    void shouldGetUnassignedTrainers() {
+        String username = "John.Smith";
+        List<Trainer> trainers = List.of(createTrainer(2L, "Olivia", "White"));
+        when(trainerService.getUnassignedTrainers(username)).thenReturn(trainers);
+
+        List<Trainer> result = gymFacade.getUnassignedTrainers(username);
+
+        assertEquals(trainers, result);
+        verify(trainerService).getUnassignedTrainers(username);
     }
 
     @Test
@@ -227,4 +256,33 @@ class GymFacadeTest {
         verify(trainingService).selectAll();
     }
 
+    @Test
+    void shouldGetTraineeTrainings() {
+        String username = "John.Smith";
+        LocalDate from = LocalDate.of(2026, 1, 1);
+        LocalDate to = LocalDate.of(2026, 12, 31);
+        List<Training> trainings = List.of(createTraining(1L, "Morning Fitness"));
+
+        when(trainingService.getTraineeTrainings(username, from, to, "Michael", "Fitness"))
+                .thenReturn(trainings);
+
+        List<Training> result = gymFacade.getTraineeTrainings(username, from, to, "Michael", "Fitness");
+
+        assertEquals(trainings, result);
+        verify(trainingService).getTraineeTrainings(username, from, to, "Michael", "Fitness");
+    }
+
+    @Test
+    void shouldGetTrainerTrainings() {
+        String username = "Michael.Green";
+        List<Training> trainings = List.of(createTraining(1L, "Morning Fitness"));
+
+        when(trainingService.getTrainerTrainings(username, null, null, "John"))
+                .thenReturn(trainings);
+
+        List<Training> result = gymFacade.getTrainerTrainings(username, null, null, "John");
+
+        assertEquals(trainings, result);
+        verify(trainingService).getTrainerTrainings(username, null, null, "John");
+    }
 }

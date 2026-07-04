@@ -1,190 +1,159 @@
 package org.gymcrm.dao.impl;
 
-import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.model.Trainee;
+import org.gymcrm.model.User;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.query.Query;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class TraineeDaoImplTest {
+
+    @Mock
+    private SessionFactory sessionFactory;
+
+    @Mock
+    private Session session;
+
+    @Mock
+    private Query<Trainee> traineeQuery;
+
+    @Mock
+    private Query<Long> countQuery;
+
+    @InjectMocks
     private TraineeDaoImpl traineeDao;
-    private Map<Long, Trainee> traineeStorage;
-    private InMemoryIdGenerator idGenerator;
 
     @BeforeEach
     void setUp() {
-        traineeStorage = new HashMap<>();
-        idGenerator = new InMemoryIdGenerator();
-
-        traineeDao = new TraineeDaoImpl(traineeStorage, idGenerator);
+        lenient().when(sessionFactory.getCurrentSession()).thenReturn(session);
     }
 
     @Test
-    void shouldSaveTraineeWithExistingId() {
-        Trainee trainee = createTrainee(1L, "John", "Smith");
+    void shouldSaveTrainee() {
+        Trainee trainee = createTrainee(null, "John.Smith");
 
         Trainee savedTrainee = traineeDao.save(trainee);
 
+        verify(session).persist(trainee);
         assertEquals(trainee, savedTrainee);
-        assertEquals(1, traineeStorage.size());
-        assertTrue(traineeStorage.containsKey(1L));
-        assertEquals("John.Smith", traineeStorage.get(1L).getUsername());
     }
 
     @Test
-    void shouldGenerateIdWhenSavingTraineeWithoutId() {
-        Trainee existingTrainee = createTrainee(5L, "John", "Smith");
-        traineeStorage.put(5L, existingTrainee);
-        idGenerator.initializeMaxTraineeId(existingTrainee.getUserId());
+    void shouldUpdateTrainee() {
+        Trainee trainee = createTrainee(1L, "John.Smith");
+        when(session.merge(trainee)).thenReturn(trainee);
 
-        Trainee newTrainee = createTrainee(null, "Anna", "Brown");
+        Trainee updatedTrainee = traineeDao.update(trainee);
 
-        Trainee savedTrainee = traineeDao.save(newTrainee);
-
-        assertEquals(6L, savedTrainee.getUserId());
-        assertEquals(2, traineeStorage.size());
-        assertTrue(traineeStorage.containsKey(6L));
-        assertEquals(newTrainee, traineeStorage.get(6L));
+        verify(session).merge(trainee);
+        assertEquals(trainee, updatedTrainee);
     }
 
     @Test
-    void shouldGenerateIdOneWhenStorageIsEmpty() {
-        Trainee trainee = createTrainee(null, "Anna", "Brown");
+    void shouldDeleteTraineeByIdWhenExists() {
+        Long traineeId = 1L;
+        Trainee trainee = createTrainee(traineeId, "John.Smith");
+        when(session.get(Trainee.class, traineeId)).thenReturn(trainee);
 
-        Trainee savedTrainee = traineeDao.save(trainee);
+        boolean result = traineeDao.deleteById(traineeId);
 
-        assertEquals(1L, savedTrainee.getUserId());
-        assertEquals(1, traineeStorage.size());
-        assertTrue(traineeStorage.containsKey(1L));
+        verify(session).remove(trainee);
+        assertTrue(result);
     }
 
     @Test
-    void shouldNotRegenerateIdWhenSavingTraineeWithExistingId() {
-        Trainee trainee = createTrainee(10L, "Anna", "Brown");
+    void shouldReturnFalseWhenDeletingNonExistingTrainee() {
+        Long traineeId = 99L;
+        when(session.get(Trainee.class, traineeId)).thenReturn(null);
 
-        Trainee savedTrainee = traineeDao.save(trainee);
+        boolean result = traineeDao.deleteById(traineeId);
 
-        assertEquals(10L, savedTrainee.getUserId());
-        assertTrue(traineeStorage.containsKey(10L));
+        verify(session, never()).remove(any());
+        assertFalse(result);
     }
 
     @Test
     void shouldFindTraineeById() {
-        Trainee trainee = createTrainee(1L, "John", "Smith");
-        traineeStorage.put(1L, trainee);
+        Long traineeId = 1L;
+        Trainee trainee = createTrainee(traineeId, "John.Smith");
+        when(session.get(Trainee.class, traineeId)).thenReturn(trainee);
 
-        Optional<Trainee> result = traineeDao.findById(1L);
+        Optional<Trainee> result = traineeDao.findById(traineeId);
 
-        assertEquals(Optional.of(trainee), result);
+        assertTrue(result.isPresent());
+        assertEquals(trainee, result.get());
     }
 
     @Test
     void shouldReturnEmptyOptionalWhenTraineeNotFound() {
-        Optional<Trainee> result = traineeDao.findById(99L);
+        Long traineeId = 99L;
+        when(session.get(Trainee.class, traineeId)).thenReturn(null);
 
+        Optional<Trainee> result = traineeDao.findById(traineeId);
+
+        assertTrue(result.isEmpty());
         assertEquals(Optional.empty(), result);
     }
 
     @Test
     void shouldFindAllTrainees() {
-        Trainee firstTrainee = createTrainee(1L, "John", "Smith");
-        Trainee secondTrainee = createTrainee(2L, "Anna", "Brown");
-
-        traineeStorage.put(1L, firstTrainee);
-        traineeStorage.put(2L, secondTrainee);
+        List<Trainee> trainees = List.of(createTrainee(1L, "John.Smith"), createTrainee(2L, "Anna.Brown"));
+        when(session.createQuery("from Trainee", Trainee.class)).thenReturn(traineeQuery);
+        when(traineeQuery.getResultList()).thenReturn(trainees);
 
         List<Trainee> result = traineeDao.findAll();
 
         assertEquals(2, result.size());
-        assertTrue(result.contains(firstTrainee));
-        assertTrue(result.contains(secondTrainee));
+        verify(traineeQuery).getResultList();
     }
 
     @Test
-    void shouldUpdateExistingTrainee() {
-        Trainee oldTrainee = createTrainee(1L, "John", "Smith");
-        traineeStorage.put(1L, oldTrainee);
+    void shouldReturnTrueWhenUsernameExists() {
+        String username = "john.smith";
+        String hql = "select count(t) from Trainee t where lower(t.user.username) = lower(:username)";
+        when(session.createQuery(hql, Long.class)).thenReturn(countQuery);
+        when(countQuery.setParameter("username", username)).thenReturn(countQuery);
+        when(countQuery.uniqueResult()).thenReturn(1L);
 
-        Trainee updatedTrainee = new Trainee(
-                1L,
-                "John",
-                "Smith",
-                "John.Smith",
-                "newPassword",
-                true,
-                LocalDate.of(2001, 5, 10),
-                "Lviv"
-        );
+        boolean exists = traineeDao.existsByUsername(username);
 
-        Trainee result = traineeDao.update(updatedTrainee);
-
-        assertEquals(updatedTrainee, result);
-        assertEquals(1L, result.getUserId());
-        assertEquals("John", result.getFirstName());
-        assertEquals("Smith", result.getLastName());
-        assertEquals("John.Smith", result.getUsername());
-        assertTrue(result.isActive());
-        assertEquals("Lviv", result.getAddress());
-        assertEquals(LocalDate.of(2001, 5, 10), result.getDateOfBirth());
-
-        assertEquals("Lviv", traineeStorage.get(1L).getAddress());
-        assertEquals(LocalDate.of(2001, 5, 10), traineeStorage.get(1L).getDateOfBirth());
+        assertTrue(exists);
     }
 
     @Test
-    void shouldThrowExceptionWhenUpdatingNonExistingTrainee() {
-        Trainee trainee = createTrainee(99L, "John", "Smith");
+    void shouldFindByUsername() {
+        String username = "john.smith";
+        String hql = "FROM Trainee t JOIN FETCH t.user WHERE LOWER(t.user.username) = LOWER(:username)";
+        Trainee trainee = createTrainee(1L, username);
 
-        assertThrows(EntityNotFoundException.class, () -> traineeDao.update(trainee));
+        when(session.createQuery(hql, Trainee.class)).thenReturn(traineeQuery);
+        when(traineeQuery.setParameter("username", username)).thenReturn(traineeQuery);
+        when(traineeQuery.uniqueResultOptional()).thenReturn(Optional.of(trainee));
+
+        Optional<Trainee> result = traineeDao.findByUsername(username);
+
+        assertTrue(result.isPresent());
+        assertEquals(trainee, result.get());
     }
 
-    @Test
-    void shouldDeleteTraineeById() {
-        Trainee trainee = createTrainee(1L, "John", "Smith");
-        traineeStorage.put(1L, trainee);
-
-        traineeDao.deleteById(1L);
-
-        assertFalse(traineeStorage.containsKey(1L));
-        assertTrue(traineeStorage.isEmpty());
-    }
-
-    @Test
-    void shouldContinueGeneratingUniqueIdAfterDeletingTrainee() {
-        Trainee firstTrainee = createTrainee(null, "John", "Smith");
-        Trainee secondTrainee = createTrainee(null, "Anna", "Brown");
-
-        traineeDao.save(firstTrainee);
-        traineeDao.save(secondTrainee);
-
-        traineeDao.deleteById(2L);
-
-        Trainee thirdTrainee = createTrainee(null, "Olivia", "White");
-
-        Trainee savedTrainee = traineeDao.save(thirdTrainee);
-
-        assertEquals(3L, savedTrainee.getUserId());
-        assertFalse(traineeStorage.containsKey(2L));
-        assertTrue(traineeStorage.containsKey(3L));
-    }
-
-    private Trainee createTrainee(Long userId, String firstName, String lastName) {
-        return new Trainee(
-                userId,
-                firstName,
-                lastName,
-                firstName + "." + lastName,
-                "password123",
-                true,
-                LocalDate.of(2000, 1, 1),
-                "Kyiv"
-        );
+    private Trainee createTrainee(Long id, String username) {
+        User user = new User(id, "First", "Last", username, "password123", true);
+        return new Trainee(id, LocalDate.of(2000, 1, 1), "Kyiv", user, new HashSet<>(), new ArrayList<>());
     }
 }

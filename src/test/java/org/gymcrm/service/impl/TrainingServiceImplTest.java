@@ -45,8 +45,8 @@ class TrainingServiceImplTest {
         Training newTraining = createTraining(null, "Evening Yoga");
         Training savedTraining = createTraining(2L, "Evening Yoga");
 
-        when(traineeService.selectById(1L)).thenReturn(Optional.of(createTrainee()));
-        when(trainerService.selectById(1L)).thenReturn(Optional.of(createTrainer()));
+        when(traineeService.selectById(1L)).thenReturn(Optional.of(new Trainee()));
+        when(trainerService.selectById(1L)).thenReturn(Optional.of(new Trainer()));
         when(trainingDao.save(newTraining)).thenReturn(savedTraining);
 
         Training result = trainingService.create(newTraining);
@@ -85,7 +85,7 @@ class TrainingServiceImplTest {
     void shouldThrowExceptionWhenTrainerDoesNotExist() {
         Training training = createTraining(null, "Evening Yoga");
 
-        when(traineeService.selectById(1L)).thenReturn(Optional.of(createTrainee()));
+        when(traineeService.selectById(1L)).thenReturn(Optional.of(new Trainee()));
         when(trainerService.selectById(1L)).thenReturn(Optional.empty());
 
         assertThrows(EntityNotFoundException.class, () -> trainingService.create(training));
@@ -135,39 +135,25 @@ class TrainingServiceImplTest {
     }
 
     private Training createTraining(Long id, String trainingName) {
+        Trainee trainee = new Trainee();
+        trainee.setId(1L);
+
+        Trainer trainer = new Trainer();
+        trainer.setId(1L);
+
+        TrainingType type = new TrainingType();
+        type.setId(1L);
+        type.setTrainingTypeName("Fitness");
+
         return new Training(
                 id,
-                1L,
-                1L,
+                trainee,
+                trainer,
                 trainingName,
-                1L,
+                type,
                 LocalDate.of(2026, 6, 24),
                 60
         );
     }
 
-    private Trainee createTrainee() {
-        return new Trainee(
-                1L,
-                "John",
-                "Smith",
-                "John.Smith",
-                "password123",
-                true,
-                LocalDate.of(2000, 1, 1),
-                "Kyiv"
-        );
-    }
-
-    private Trainer createTrainer() {
-        return new Trainer(
-                1L,
-                "Michael",
-                "Green",
-                "Michael.Green",
-                "password123",
-                true,
-                new TrainingType(1L, "Fitness")
-        );
-    }
 }

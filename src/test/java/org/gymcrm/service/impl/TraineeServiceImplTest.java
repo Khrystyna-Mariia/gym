@@ -3,6 +3,7 @@ package org.gymcrm.service.impl;
 import org.gymcrm.dao.TraineeDao;
 import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.Trainee;
+import org.gymcrm.model.User;
 import org.gymcrm.service.UserProfileInitializer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,46 +35,33 @@ class TraineeServiceImplTest {
 
     @Test
     void shouldCreateTraineeUsingInitializerAndDao() {
-        Trainee newTrainee = new Trainee(
-                null,
-                "John",
-                "Smith",
-                null,
-                null,
-                false,
-                LocalDate.of(2001, 3, 10),
-                "Ternopil"
-        );
+        Trainee newTrainee = createTrainee(null, "John", "Smith", null);
+        newTrainee.getUser().setPassword(null);
+        newTrainee.getUser().setActive(false);
 
-        Trainee savedTrainee = new Trainee(
-                2L,
-                "John",
-                "Smith",
-                "John.Smith1",
-                "Generated1",
-                true,
-                LocalDate.of(2001, 3, 10),
-                "Ternopil"
-        );
+        Trainee savedTrainee = createTrainee(2L, "John", "Smith", "John.Smith1");
+        savedTrainee.getUser().setPassword("Generated1");
+        savedTrainee.getUser().setActive(true);
 
         doAnswer(invocation -> {
-            Trainee trainee = invocation.getArgument(0);
-            trainee.setUsername("John.Smith1");
-            trainee.setPassword("Generated1");
-            trainee.setActive(true);
+            User user = invocation.getArgument(0);
+            user.setUsername("John.Smith1");
+            user.setPassword("Generated1");
+            user.setActive(true);
             return null;
-        }).when(userProfileInitializer).initialize(newTrainee);
+        }).when(userProfileInitializer).initialize(any(User.class));
 
         when(traineeDao.save(newTrainee)).thenReturn(savedTrainee);
 
         Trainee result = traineeService.create(newTrainee);
 
-        assertEquals(2L, result.getUserId());
-        assertEquals("John.Smith1", result.getUsername());
-        assertEquals("Generated1", result.getPassword());
-        assertTrue(result.isActive());
+        assertNotNull(result);
+        assertEquals(2L, result.getId());
+        assertEquals("John.Smith1", result.getUser().getUsername());
+        assertEquals("Generated1", result.getUser().getPassword());
+        assertTrue(result.getUser().isActive());
 
-        verify(userProfileInitializer).initialize(newTrainee);
+        verify(userProfileInitializer).initialize(newTrainee.getUser());
         verify(traineeDao).save(newTrainee);
     }
 
@@ -83,6 +71,15 @@ class TraineeServiceImplTest {
 
         verifyNoInteractions(userProfileInitializer);
         verifyNoInteractions(traineeDao);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTraineeHasNullUser() {
+        Trainee traineeWithNoUser = new Trainee();
+        traineeWithNoUser.setUser(null);
+
+        assertThrows(ValidationException.class, () -> traineeService.create(traineeWithNoUser));
+        verifyNoInteractions(userProfileInitializer, traineeDao);
     }
 
     @Test
@@ -141,16 +138,26 @@ class TraineeServiceImplTest {
         verify(traineeDao).findAll();
     }
 
-    private Trainee createTrainee(Long userId, String firstName, String lastName, String username) {
-        return new Trainee(
-                userId,
-                firstName,
-                lastName,
-                username,
-                "password123",
-                true,
-                LocalDate.of(2000, 1, 1),
-                "Kyiv"
-        );
+    @Test
+    void shouldSelectTraineeByUsername() {
+        String username = "john.smith";
+        Trainee trainee = createTrainee(1L, "John", "Smith", username);
+        when(traineeDao.findByUsername(username)).thenReturn(Optional.of(trainee));
+
+        Optional<Trainee> result = traineeService.selectByUsername(username);
+
+        assertTrue(result.isPresent());
+        assertEquals(trainee, result.get());
+        verify(traineeDao).findByUsername(username);
+    }
+
+    private Trainee createTrainee(Long id, String firstName, String lastName, String username) {
+        User user = new User(id, firstName, lastName, username, "password123", true);
+        Trainee trainee = new Trainee();
+        trainee.setId(id);
+        trainee.setUser(user);
+        trainee.setDateOfBirth(LocalDate.of(2000, 1, 1));
+        trainee.setAddress("Kyiv");
+        return trainee;
     }
 }

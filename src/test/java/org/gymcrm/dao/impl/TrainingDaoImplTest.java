@@ -1,137 +1,141 @@
 package org.gymcrm.dao.impl;
 
+import org.gymcrm.model.Trainee;
+import org.gymcrm.model.Trainer;
 import org.gymcrm.model.Training;
+import org.gymcrm.model.TrainingType;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.query.Query;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class TrainingDaoImplTest {
+
+    @Mock
+    private SessionFactory sessionFactory;
+
+    @Mock
+    private Session session;
+
+    @Mock
+    private Query<Training> trainingQuery;
+
+    @InjectMocks
     private TrainingDaoImpl trainingDao;
-    private Map<Long, Training> trainingStorage;
-    private InMemoryIdGenerator idGenerator;
 
     @BeforeEach
     void setUp() {
-        trainingStorage = new HashMap<>();
-        idGenerator = new InMemoryIdGenerator();
-
-        trainingDao = new TrainingDaoImpl(trainingStorage, idGenerator);
+        lenient().when(sessionFactory.getCurrentSession()).thenReturn(session);
     }
 
     @Test
-    void shouldSaveTrainingWithExistingId() {
-        Training training = createTraining(1L, "Morning Fitness");
+    void shouldSaveTraining() {
+        Training training = createTraining(null, "Morning Cardio");
 
         Training savedTraining = trainingDao.save(training);
 
+        verify(session).persist(training);
         assertEquals(training, savedTraining);
-        assertEquals(1, trainingStorage.size());
-        assertTrue(trainingStorage.containsKey(1L));
-    }
-
-    @Test
-    void shouldGenerateIdWhenSavingTrainingWithoutId() {
-        Training existingTraining = createTraining(5L, "Morning Fitness");
-        trainingStorage.put(5L, existingTraining);
-        idGenerator.initializeMaxTrainingId(existingTraining.getId());
-
-        Training newTraining = createTraining(null, "Evening Yoga");
-
-        Training savedTraining = trainingDao.save(newTraining);
-
-        assertEquals(6L, savedTraining.getId());
-        assertEquals(2, trainingStorage.size());
-        assertTrue(trainingStorage.containsKey(6L));
-        assertEquals(newTraining, trainingStorage.get(6L));
-    }
-
-    @Test
-    void shouldGenerateIdOneWhenStorageIsEmpty() {
-        Training training = createTraining(null, "Evening Yoga");
-
-        Training savedTraining = trainingDao.save(training);
-
-        assertEquals(1L, savedTraining.getId());
-        assertEquals(1, trainingStorage.size());
-        assertTrue(trainingStorage.containsKey(1L));
-    }
-
-    @Test
-    void shouldNotRegenerateIdWhenSavingTrainingWithExistingId() {
-        Training training = createTraining(10L, "Evening Yoga");
-
-        Training savedTraining = trainingDao.save(training);
-
-        assertEquals(10L, savedTraining.getId());
-        assertTrue(trainingStorage.containsKey(10L));
     }
 
     @Test
     void shouldFindTrainingById() {
-        Training training = createTraining(1L, "Morning Fitness");
-        trainingStorage.put(1L, training);
+        Long trainingId = 1L;
+        Training training = createTraining(trainingId, "Morning Cardio");
+        when(session.get(Training.class, trainingId)).thenReturn(training);
 
-        Optional<Training> result = trainingDao.findById(1L);
+        Optional<Training> result = trainingDao.findById(trainingId);
 
-        assertEquals(Optional.of(training), result);
+        assertTrue(result.isPresent());
+        assertEquals(training, result.get());
     }
 
     @Test
     void shouldReturnEmptyOptionalWhenTrainingNotFound() {
-        Optional<Training> result = trainingDao.findById(99L);
+        Long trainingId = 99L;
+        when(session.get(Training.class, trainingId)).thenReturn(null);
 
+        Optional<Training> result = trainingDao.findById(trainingId);
+
+        assertTrue(result.isEmpty());
         assertEquals(Optional.empty(), result);
     }
 
     @Test
     void shouldFindAllTrainings() {
-        Training firstTraining = createTraining(1L, "Morning Fitness");
-        Training secondTraining = createTraining(2L, "Evening Yoga");
-
-        trainingStorage.put(1L, firstTraining);
-        trainingStorage.put(2L, secondTraining);
+        List<Training> trainings = List.of(createTraining(1L, "Yoga"), createTraining(2L, "Cardio"));
+        when(session.createQuery("from Training", Training.class)).thenReturn(trainingQuery);
+        when(trainingQuery.getResultList()).thenReturn(trainings);
 
         List<Training> result = trainingDao.findAll();
 
         assertEquals(2, result.size());
-        assertTrue(result.contains(firstTraining));
-        assertTrue(result.contains(secondTraining));
     }
 
     @Test
-    void shouldContinueGeneratingUniqueIdAfterRemovingTraining() {
-        Training firstTraining = createTraining(null, "Morning Fitness");
-        Training secondTraining = createTraining(null, "Evening Yoga");
+    void shouldFindTraineeTrainingsWithFilters() {
+        String username = "john.smith";
+        LocalDate from = LocalDate.of(2026, 1, 1);
+        LocalDate to = LocalDate.of(2026, 12, 31);
 
-        trainingDao.save(firstTraining);
-        trainingDao.save(secondTraining);
+        String expectedHql = "FROM Training t WHERE LOWER(t.trainee.user.username) = LOWER(:username) " +
+                "AND t.trainingDate >= :fromDate AND t.trainingDate <= :toDate " +
+                "AND (LOWER(t.trainer.user.firstName) LIKE LOWER(:trainerName) OR LOWER(t.trainer.user.lastName) LIKE LOWER(:trainerName)) " +
+                "AND LOWER(t.trainingType.trainingTypeName) = LOWER(:typeName)";
 
-        trainingStorage.remove(2L);
+        when(session.createQuery(expectedHql, Training.class)).thenReturn(trainingQuery);
+        when(trainingQuery.setParameter("username", username)).thenReturn(trainingQuery);
+        when(trainingQuery.setParameter("fromDate", from)).thenReturn(trainingQuery);
+        when(trainingQuery.setParameter("toDate", to)).thenReturn(trainingQuery);
+        when(trainingQuery.setParameter(eq("trainerName"), anyString())).thenReturn(trainingQuery);
+        when(trainingQuery.setParameter("typeName", "Fitness")).thenReturn(trainingQuery);
+        when(trainingQuery.getResultList()).thenReturn(List.of(createTraining(1L, "Filtered Training")));
 
-        Training thirdTraining = createTraining(null, "Strength Training");
+        List<Training> result = trainingDao.findTraineeTrainings(username, from, to, "John", "Fitness");
 
-        Training savedTraining = trainingDao.save(thirdTraining);
-
-        assertEquals(3L, savedTraining.getId());
-        assertFalse(trainingStorage.containsKey(2L));
-        assertTrue(trainingStorage.containsKey(3L));
+        assertFalse(result.isEmpty());
+        verify(trainingQuery).getResultList();
     }
 
-    private Training createTraining(Long id, String trainingName) {
+    @Test
+    void shouldFindTrainerTrainingsWithFilters() {
+        String username = "michael.green";
+        LocalDate from = LocalDate.of(2026, 6, 1);
+
+        String expectedHql = "FROM Training t WHERE LOWER(t.trainer.user.username) = LOWER(:username) " +
+                "AND t.trainingDate >= :fromDate";
+
+        when(session.createQuery(expectedHql, Training.class)).thenReturn(trainingQuery);
+        when(trainingQuery.setParameter("username", username)).thenReturn(trainingQuery);
+        when(trainingQuery.setParameter("fromDate", from)).thenReturn(trainingQuery);
+        when(trainingQuery.getResultList()).thenReturn(List.of(createTraining(1L, "Trainer Session")));
+
+        List<Training> result = trainingDao.findTrainerTrainings(username, from, null, null);
+
+        assertEquals(1, result.size());
+    }
+
+    private Training createTraining(Long id, String name) {
         return new Training(
                 id,
-                1L,
-                1L,
-                trainingName,
-                1L,
-                LocalDate.of(2026, 6, 24),
+                new Trainee(),
+                new Trainer(),
+                name,
+                new TrainingType(),
+                LocalDate.of(2026, 7, 4),
                 60
         );
     }

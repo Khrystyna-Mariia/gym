@@ -77,6 +77,8 @@ public class DataInitializer {
                         Long fileId = initialDataParser.parseLong(parts[1], "training type id");
                         TrainingType type = initialDataParser.parseTrainingType(parts);
 
+                        type.setId(null);
+
                         session.persist(type);
                         trainingTypeMap.put(fileId, type);
                     }
@@ -120,6 +122,8 @@ public class DataInitializer {
                         training.setTrainee(managedTrainee);
                         training.setTrainer(managedTrainer);
                         training.setTrainingType(managedType);
+
+                        training.setId(null);
 
                         session.persist(training);
                     }

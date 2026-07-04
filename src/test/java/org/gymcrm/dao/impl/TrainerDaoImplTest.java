@@ -1,175 +1,152 @@
 package org.gymcrm.dao.impl;
 
-import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.TrainingType;
+import org.gymcrm.model.User;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.query.Query;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class TrainerDaoImplTest {
+
+    @Mock
+    private SessionFactory sessionFactory;
+
+    @Mock
+    private Session session;
+
+    @Mock
+    private Query<Trainer> trainerQuery;
+
+    @Mock
+    private Query<Long> countQuery;
+
+    @InjectMocks
     private TrainerDaoImpl trainerDao;
-    private Map<Long, Trainer> trainerStorage;
-    private InMemoryIdGenerator idGenerator;
 
     @BeforeEach
     void setUp() {
-        trainerStorage = new HashMap<>();
-        idGenerator = new InMemoryIdGenerator();
-
-        trainerDao = new TrainerDaoImpl(trainerStorage, idGenerator);
+        lenient().when(sessionFactory.getCurrentSession()).thenReturn(session);
     }
 
     @Test
-    void shouldSaveTrainerWithExistingId() {
-        Trainer trainer = createTrainer(1L, "Michael", "Green");
+    void shouldSaveTrainer() {
+        Trainer trainer = createTrainer(null, "Michael.Green");
 
         Trainer savedTrainer = trainerDao.save(trainer);
 
+        verify(session).persist(trainer);
         assertEquals(trainer, savedTrainer);
-        assertEquals(1, trainerStorage.size());
-        assertTrue(trainerStorage.containsKey(1L));
     }
 
     @Test
-    void shouldGenerateIdWhenSavingTrainerWithoutId() {
-        Trainer existingTrainer = createTrainer(5L, "Michael", "Green");
-        trainerStorage.put(5L, existingTrainer);
-        idGenerator.initializeMaxTrainerId(existingTrainer.getUserId());
+    void shouldUpdateTrainer() {
+        Trainer trainer = createTrainer(1L, "Michael.Green");
+        when(session.merge(trainer)).thenReturn(trainer);
 
-        Trainer newTrainer = createTrainer(null, "Olivia", "White");
+        Trainer updatedTrainer = trainerDao.update(trainer);
 
-        Trainer savedTrainer = trainerDao.save(newTrainer);
-
-        assertEquals(6L, savedTrainer.getUserId());
-        assertEquals(2, trainerStorage.size());
-        assertTrue(trainerStorage.containsKey(6L));
-        assertEquals(newTrainer, trainerStorage.get(6L));
-    }
-
-    @Test
-    void shouldGenerateIdOneWhenStorageIsEmpty() {
-        Trainer trainer = createTrainer(null, "Olivia", "White");
-
-        Trainer savedTrainer = trainerDao.save(trainer);
-
-        assertEquals(1L, savedTrainer.getUserId());
-        assertEquals(1, trainerStorage.size());
-        assertTrue(trainerStorage.containsKey(1L));
-    }
-
-    @Test
-    void shouldNotRegenerateIdWhenSavingTrainerWithExistingId() {
-        Trainer trainer = createTrainer(10L, "Olivia", "White");
-
-        Trainer savedTrainer = trainerDao.save(trainer);
-
-        assertEquals(10L, savedTrainer.getUserId());
-        assertTrue(trainerStorage.containsKey(10L));
+        verify(session).merge(trainer);
+        assertEquals(trainer, updatedTrainer);
     }
 
     @Test
     void shouldFindTrainerById() {
-        Trainer trainer = createTrainer(1L, "Michael", "Green");
-        trainerStorage.put(1L, trainer);
+        Long trainerId = 1L;
+        Trainer trainer = createTrainer(trainerId, "Michael.Green");
+        when(session.get(Trainer.class, trainerId)).thenReturn(trainer);
 
-        Optional<Trainer> result = trainerDao.findById(1L);
+        Optional<Trainer> result = trainerDao.findById(trainerId);
 
-        assertEquals(Optional.of(trainer), result);
+        assertTrue(result.isPresent());
+        assertEquals(trainer, result.get());
     }
 
     @Test
     void shouldReturnEmptyOptionalWhenTrainerNotFound() {
-        Optional<Trainer> result = trainerDao.findById(99L);
+        Long trainerId = 99L;
+        when(session.get(Trainer.class, trainerId)).thenReturn(null);
 
+        Optional<Trainer> result = trainerDao.findById(trainerId);
+
+        assertTrue(result.isEmpty());
         assertEquals(Optional.empty(), result);
     }
 
     @Test
     void shouldFindAllTrainers() {
-        Trainer firstTrainer = createTrainer(1L, "Michael", "Green");
-        Trainer secondTrainer = createTrainer(2L, "Olivia", "White");
-
-        trainerStorage.put(1L, firstTrainer);
-        trainerStorage.put(2L, secondTrainer);
+        List<Trainer> trainers = List.of(createTrainer(1L, "Michael.Green"), createTrainer(2L, "Olivia.White"));
+        when(session.createQuery("from Trainer", Trainer.class)).thenReturn(trainerQuery);
+        when(trainerQuery.getResultList()).thenReturn(trainers);
 
         List<Trainer> result = trainerDao.findAll();
 
         assertEquals(2, result.size());
-        assertTrue(result.contains(firstTrainer));
-        assertTrue(result.contains(secondTrainer));
     }
 
     @Test
-    void shouldUpdateExistingTrainer() {
-        Trainer oldTrainer = createTrainer(1L, "Michael", "Green");
-        trainerStorage.put(1L, oldTrainer);
+    void shouldReturnTrueWhenTrainerUsernameExists() {
+        String username = "michael.green";
+        String hql = "select count(t) from Trainer t where lower(t.user.username) = lower(:username)";
+        when(session.createQuery(hql, Long.class)).thenReturn(countQuery);
+        when(countQuery.setParameter("username", username)).thenReturn(countQuery);
+        when(countQuery.uniqueResult()).thenReturn(1L);
 
-        Trainer updatedTrainer = new Trainer(
-                1L,
-                "Michael",
-                "Green",
-                "Michael.Green",
-                "newPassword",
-                true,
-                new TrainingType(2L, "Yoga")
-        );
+        boolean exists = trainerDao.existsByUsername(username);
 
-        Trainer result = trainerDao.update(updatedTrainer);
-
-        assertEquals(updatedTrainer, result);
-        assertEquals(1L, result.getUserId());
-        assertEquals("Michael", result.getFirstName());
-        assertEquals("Green", result.getLastName());
-        assertEquals("Michael.Green", result.getUsername());
-        assertTrue(result.isActive());
-        assertEquals("Yoga", result.getSpecialization().getTrainingTypeName());
-        assertEquals(2L, result.getSpecialization().getId());
-
-        assertEquals("Yoga", trainerStorage.get(1L).getSpecialization().getTrainingTypeName());
+        assertTrue(exists);
     }
 
     @Test
-    void shouldThrowExceptionWhenUpdatingNonExistingTrainer() {
-        Trainer trainer = createTrainer(99L, "Michael", "Green");
+    void shouldFindByUsername() {
+        String username = "michael.green";
+        String hql = "FROM Trainer t JOIN FETCH t.user WHERE LOWER(t.user.username) = LOWER(:username)";
+        Trainer trainer = createTrainer(1L, username);
 
-        assertThrows(EntityNotFoundException.class, () -> trainerDao.update(trainer));
+        when(session.createQuery(hql, Trainer.class)).thenReturn(trainerQuery);
+        when(trainerQuery.setParameter("username", username)).thenReturn(trainerQuery);
+        when(trainerQuery.uniqueResultOptional()).thenReturn(Optional.of(trainer));
+
+        Optional<Trainer> result = trainerDao.findByUsername(username);
+
+        assertTrue(result.isPresent());
+        assertEquals(trainer, result.get());
     }
 
     @Test
-    void shouldContinueGeneratingUniqueIdAfterRemovingTrainer() {
-        Trainer firstTrainer = createTrainer(null, "Michael", "Green");
-        Trainer secondTrainer = createTrainer(null, "Olivia", "White");
+    void shouldFindTrainersNotAssignedToTrainee() {
+        String traineeUsername = "john.smith";
+        String hql = "FROM Trainer t WHERE t.id NOT IN " +
+                "(SELECT tr.id FROM Trainee tn JOIN tn.trainers tr WHERE LOWER(tn.user.username) = LOWER(:username))";
+        List<Trainer> unassigned = List.of(createTrainer(5L, "Coach.Alex"));
 
-        trainerDao.save(firstTrainer);
-        trainerDao.save(secondTrainer);
+        when(session.createQuery(hql, Trainer.class)).thenReturn(trainerQuery);
+        when(trainerQuery.setParameter("username", traineeUsername)).thenReturn(trainerQuery);
+        when(trainerQuery.getResultList()).thenReturn(unassigned);
 
-        trainerStorage.remove(2L);
+        List<Trainer> result = trainerDao.findTrainersNotAssignedToTrainee(traineeUsername);
 
-        Trainer thirdTrainer = createTrainer(null, "David", "Miller");
-
-        Trainer savedTrainer = trainerDao.save(thirdTrainer);
-
-        assertEquals(3L, savedTrainer.getUserId());
-        assertFalse(trainerStorage.containsKey(2L));
-        assertTrue(trainerStorage.containsKey(3L));
+        assertEquals(1, result.size());
+        assertEquals("Coach.Alex", result.get(0).getUser().getUsername());
     }
 
-    private Trainer createTrainer(Long userId, String firstName, String lastName) {
-        return new Trainer(
-                userId,
-                firstName,
-                lastName,
-                firstName + "." + lastName,
-                "password123",
-                true,
-                new TrainingType(1L, "Fitness")
-        );
+    private Trainer createTrainer(Long id, String username) {
+        User user = new User(id, "First", "Last", username, "password123", true);
+        TrainingType type = new TrainingType(1L, "Fitness");
+        return new Trainer(id, type, user, new HashSet<>());
     }
 }
