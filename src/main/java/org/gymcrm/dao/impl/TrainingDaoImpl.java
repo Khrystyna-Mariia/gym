@@ -2,55 +2,95 @@ package org.gymcrm.dao.impl;
 
 import org.gymcrm.dao.TrainingDao;
 import org.gymcrm.model.Training;
-import org.gymcrm.storage.InMemoryIdGenerator;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.query.Query;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @Repository
 public class TrainingDaoImpl implements TrainingDao {
     private static final Logger logger = LoggerFactory.getLogger(TrainingDaoImpl.class);
 
-    private final Map<Long, Training> trainingStorage;
-    private final InMemoryIdGenerator idGenerator;
+    private final SessionFactory sessionFactory;
 
-    public TrainingDaoImpl(
-            @Qualifier("trainingStorage") Map<Long, Training> trainingStorage,
-            InMemoryIdGenerator idGenerator
-    ) {
-        this.trainingStorage = trainingStorage;
-        this.idGenerator = idGenerator;
+    public TrainingDaoImpl(SessionFactory sessionFactory) {
+        this.sessionFactory = sessionFactory;
+    }
+
+    private Session getCurrentSession() {
+        return sessionFactory.getCurrentSession();
     }
 
     @Override
     public Training save(Training training) {
-        if (training.getId() == null) {
-            Long generatedId = idGenerator.generateNextTrainingId();
-            training.setId(generatedId);
-            logger.debug("Generated training id {}", generatedId);
-        }
-
-        logger.debug("Saving training with id {}", training.getId());
-        trainingStorage.put(training.getId(), training);
-
+        logger.debug("Persisting new training: {}", training.getTrainingName());
+        getCurrentSession().persist(training);
         return training;
     }
 
     @Override
     public Optional<Training> findById(Long id) {
-        logger.debug("Finding training with id {}", id);
-        return Optional.ofNullable(trainingStorage.get(id));
+        logger.debug("Fetching training by ID: {}", id);
+        return Optional.ofNullable(getCurrentSession().get(Training.class, id));
     }
 
     @Override
     public List<Training> findAll() {
-        logger.debug("Finding all trainings");
-        return new ArrayList<>(trainingStorage.values());
+        logger.debug("Fetching all trainings");
+        return getCurrentSession().createQuery("from Training", Training.class).getResultList();
+    }
+
+    @Override
+    public List<Training> findTraineeTrainings(String username, LocalDate fromDate, LocalDate toDate, String trainerName, String trainingTypeName) {
+        logger.debug("Filtering trainee trainings for username '{}'", username);
+
+        StringBuilder hql = new StringBuilder("FROM Training t WHERE LOWER(t.trainee.user.username) = LOWER(:username)");
+
+        if (fromDate != null) hql.append(" AND t.trainingDate >= :fromDate");
+        if (toDate != null) hql.append(" AND t.trainingDate <= :toDate");
+        if (trainerName != null && !trainerName.trim().isEmpty()) {
+            hql.append(" AND (LOWER(t.trainer.user.firstName) LIKE LOWER(:trainerName) OR LOWER(t.trainer.user.lastName) LIKE LOWER(:trainerName))");
+        }
+        if (trainingTypeName != null && !trainingTypeName.trim().isEmpty()) {
+            hql.append(" AND LOWER(t.trainingType.trainingTypeName) = LOWER(:typeName)");
+        }
+
+        Query<Training> query = getCurrentSession().createQuery(hql.toString(), Training.class)
+                .setParameter("username", username);
+
+        if (fromDate != null) query.setParameter("fromDate", fromDate);
+        if (toDate != null) query.setParameter("toDate", toDate);
+        if (trainerName != null && !trainerName.trim().isEmpty()) query.setParameter("trainerName", "%" + trainerName + "%");
+        if (trainingTypeName != null && !trainingTypeName.trim().isEmpty()) query.setParameter("typeName", trainingTypeName);
+
+        return query.getResultList();
+    }
+
+    @Override
+    public List<Training> findTrainerTrainings(String username, LocalDate fromDate, LocalDate toDate, String traineeName) {
+        logger.debug("Filtering trainer trainings for username '{}'", username);
+
+        StringBuilder hql = new StringBuilder("FROM Training t WHERE LOWER(t.trainer.user.username) = LOWER(:username)");
+
+        if (fromDate != null) hql.append(" AND t.trainingDate >= :fromDate");
+        if (toDate != null) hql.append(" AND t.trainingDate <= :toDate");
+        if (traineeName != null && !traineeName.trim().isEmpty()) {
+            hql.append(" AND (LOWER(t.trainee.user.firstName) LIKE LOWER(:traineeName) OR LOWER(t.trainee.user.lastName) LIKE LOWER(:traineeName))");
+        }
+
+        Query<Training> query = getCurrentSession().createQuery(hql.toString(), Training.class)
+                .setParameter("username", username);
+
+        if (fromDate != null) query.setParameter("fromDate", fromDate);
+        if (toDate != null) query.setParameter("toDate", toDate);
+        if (traineeName != null && !traineeName.trim().isEmpty()) query.setParameter("traineeName", "%" + traineeName + "%");
+
+        return query.getResultList();
     }
 }
