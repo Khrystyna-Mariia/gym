@@ -1,7 +1,6 @@
 package org.gymcrm.dao.impl;
 
 import org.gymcrm.model.Training;
-import org.gymcrm.storage.InMemoryIdGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

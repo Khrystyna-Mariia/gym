@@ -15,4 +15,6 @@ public interface TraineeService {
     Optional<Trainee> selectById(Long userId);
 
     List<Trainee> selectAll();
+
+    Optional<Trainee> selectByUsername(String username);
 }

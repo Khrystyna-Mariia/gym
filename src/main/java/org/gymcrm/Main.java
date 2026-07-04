@@ -2,10 +2,7 @@ package org.gymcrm;
 
 import org.gymcrm.config.AppConfig;
 import org.gymcrm.facade.GymFacade;
-import org.gymcrm.model.Trainee;
-import org.gymcrm.model.Trainer;
-import org.gymcrm.model.Training;
-import org.gymcrm.model.TrainingType;
+import org.gymcrm.model.*;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import java.time.LocalDate;
@@ -17,56 +14,45 @@ public class Main {
             GymFacade gymCrmFacade = context.getBean(GymFacade.class);
 
             System.out.println("Initial trainees:");
-            gymCrmFacade.getAllTrainees().forEach(System.out::println);
+            gymCrmFacade.getAllTrainees().forEach(t -> System.out.println(t.getUser().getFirstName() + " " + t.getUser().getLastName()));
 
-            Trainee newTrainee = new Trainee(
-                    null,
-                    "John",
-                    "Smith",
-                    null,
-                    null,
-                    true,
-                    LocalDate.of(2001, 3, 10),
-                    "Ternopil"
-            );
+            User userTrainee = new User();
+            userTrainee.setFirstName("John");
+            userTrainee.setLastName("Smith");
+
+            Trainee newTrainee = new Trainee();
+            newTrainee.setUser(userTrainee);
+            newTrainee.setDateOfBirth(LocalDate.of(2001, 3, 10));
+            newTrainee.setAddress("Ternopil");
 
             gymCrmFacade.createTrainee(newTrainee);
 
             System.out.println("\nTrainees after creating new trainee:");
-            gymCrmFacade.getAllTrainees().forEach(System.out::println);
+            gymCrmFacade.getAllTrainees().forEach(t -> System.out.println(t.getUser().getFirstName() + " " + t.getUser().getLastName()));
 
-            Trainer newTrainer = new Trainer(
-                    null,
-                    "John",
-                    "Smith",
-                    null,
-                    null,
-                    true,
-                    new TrainingType(3L, "Strength")
-            );
+            User userTrainer = new User();
+            userTrainer.setFirstName("Alex");
+            userTrainer.setLastName("Brown");
+
+            Trainer newTrainer = new Trainer();
+            newTrainer.setUser(userTrainer);
+
+            TrainingType spec = new TrainingType();
+            spec.setId(1L);
+            newTrainer.setSpecialization(spec);
 
             gymCrmFacade.createTrainer(newTrainer);
 
-            System.out.println("\nTrainers after creating new trainer:");
-            gymCrmFacade.getAllTrainers().forEach(System.out::println);
+            Training newTraining = new Training();
+            newTraining.setTrainee(newTrainee);
+            newTraining.setTrainer(newTrainer);
+            newTraining.setTrainingType(spec);
 
-            Training newTraining = new Training(
-                    null,
-                    3L,
-                    3L,
-                    "Personal Strength Training",
-                    3L,
-                    LocalDate.of(2026, 6, 30),
-                    90
-            );
+            newTraining.setTrainingName("Personal Strength Training");
+            newTraining.setTrainingDate(LocalDate.of(2026, 6, 30));
+            newTraining.setTrainingDuration(90);
 
             gymCrmFacade.createTraining(newTraining);
-
-            System.out.println("\nTrainings after creating new training:");
-            gymCrmFacade.getAllTrainings().forEach(System.out::println);
-
-            System.out.println("\nSelect trainee by id 3:");
-            gymCrmFacade.getTrainee(3L).ifPresent(System.out::println);
 
             System.out.println("\nGym CRM Application finished successfully.");
         }

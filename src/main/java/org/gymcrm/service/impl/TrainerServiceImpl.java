@@ -8,11 +8,13 @@ import org.gymcrm.service.UserProfileInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class TrainerServiceImpl implements TrainerService {
     private static final Logger logger = LoggerFactory.getLogger(TrainerServiceImpl.class);
 
@@ -26,12 +28,12 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     public Trainer create(Trainer trainer) {
-        if (trainer == null) {
-            logger.warn("Failed to create trainer profile: trainer is null");
-            throw new ValidationException("Trainer must not be null");
+        if (trainer == null || trainer.getUser() == null) {
+            logger.warn("Failed to create trainer profile: trainer or user data is null");
+            throw new ValidationException("Trainer and associated User must not be null");
         }
 
-        userProfileInitializer.initialize(trainer);
+        userProfileInitializer.initialize(trainer.getUser());
         return trainerDao.save(trainer);
     }
 
@@ -41,12 +43,26 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
     @Override
-    public Optional<Trainer> selectById(Long userId) {
-        return trainerDao.findById(userId);
+    @Transactional(readOnly = true)
+    public Optional<Trainer> selectById(Long id) {
+        return trainerDao.findById(id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Trainer> selectAll() {
         return trainerDao.findAll();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Trainer> selectByUsername(String username) {
+        return trainerDao.findByUsername(username);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Trainer> getUnassignedTrainers(String traineeUsername) {
+        return trainerDao.findTrainersNotAssignedToTrainee(traineeUsername);
     }
 }

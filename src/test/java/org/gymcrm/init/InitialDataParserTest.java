@@ -1,4 +1,4 @@
-package org.gymcrm.storage;
+package org.gymcrm.init;
 
 import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.Trainee;

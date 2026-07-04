@@ -2,7 +2,6 @@ package org.gymcrm.dao.impl;
 
 import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.model.Trainee;
-import org.gymcrm.storage.InMemoryIdGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

@@ -13,4 +13,8 @@ public interface TrainerService {
     Optional<Trainer> selectById(Long userId);
 
     List<Trainer> selectAll();
+
+    Optional<Trainer> selectByUsername(String username);
+
+    List<Trainer> getUnassignedTrainers(String traineeUsername);
 }
