@@ -17,4 +17,4 @@ public interface TrainingService {
 
     List<Training> getTrainerTrainings(String username, LocalDate from, LocalDate to, String traineeName);
 
-    }
+}

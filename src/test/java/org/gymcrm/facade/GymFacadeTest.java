@@ -51,7 +51,7 @@ class GymFacadeTest {
         Trainer trainer = new Trainer();
         trainer.setId(id);
         trainer.setUser(user);
-        trainer.setSpecialization(new TrainingType(1L, "Fitness"));
+        trainer.setSpecialization(new TrainingType(1L, TrainingTypeEnum.FITNESS));
         return trainer;
     }
 
@@ -63,7 +63,7 @@ class GymFacadeTest {
         training.setTrainer(createTrainer(1L, "Michael", "Green"));
         training.setTrainingDate(LocalDate.of(2026, 6, 24));
         training.setTrainingDuration(60);
-        training.setTrainingType(new TrainingType(1L, "Fitness"));
+        training.setTrainingType(new TrainingType(1L, TrainingTypeEnum.FITNESS));
         return training;
     }
 
@@ -93,9 +93,11 @@ class GymFacadeTest {
 
     @Test
     void shouldDeleteTrainee() {
-        gymFacade.deleteTrainee(1L);
+        String username = "John.Smith";
 
-        verify(traineeService).delete(1L);
+        gymFacade.deleteTrainee(username);
+
+        verify(traineeService).deleteByUsername(username);
     }
 
     @Test
@@ -137,6 +139,55 @@ class GymFacadeTest {
         assertTrue(result.contains(firstTrainee));
         assertTrue(result.contains(secondTrainee));
         verify(traineeService).selectAll();
+    }
+
+    @Test
+    void shouldAuthenticateTrainee() {
+        String username = "John.Smith";
+        String password = "password123";
+        when(traineeService.authenticate(username, password)).thenReturn(true);
+
+        boolean result = gymFacade.authenticateTrainee(username, password);
+
+        assertTrue(result);
+        verify(traineeService).authenticate(username, password);
+    }
+
+    @Test
+    void shouldChangeTraineePassword() {
+        String username = "John.Smith";
+
+        gymFacade.changeTraineePassword(username, "oldPass", "newPass");
+
+        verify(traineeService).changePassword(username, "oldPass", "newPass");
+    }
+
+    @Test
+    void shouldActivateTrainee() {
+        String username = "John.Smith";
+
+        gymFacade.activateTrainee(username);
+
+        verify(traineeService).activate(username);
+    }
+
+    @Test
+    void shouldDeactivateTrainee() {
+        String username = "John.Smith";
+
+        gymFacade.deactivateTrainee(username);
+
+        verify(traineeService).deactivate(username);
+    }
+
+    @Test
+    void shouldUpdateTraineeTrainersList() {
+        String username = "John.Smith";
+        List<String> trainers = List.of("Trainer.One", "Trainer.Two");
+
+        gymFacade.updateTraineeTrainersList(username, trainers);
+
+        verify(traineeService).updateTrainersList(username, trainers);
     }
 
     @Test
@@ -217,6 +268,45 @@ class GymFacadeTest {
     }
 
     @Test
+    void shouldAuthenticateTrainer() {
+        String username = "Michael.Green";
+        String password = "password123";
+        when(trainerService.authenticate(username, password)).thenReturn(true);
+
+        boolean result = gymFacade.authenticateTrainer(username, password);
+
+        assertTrue(result);
+        verify(trainerService).authenticate(username, password);
+    }
+
+    @Test
+    void shouldChangeTrainerPassword() {
+        String username = "Michael.Green";
+
+        gymFacade.changeTrainerPassword(username, "oldPass", "newPass");
+
+        verify(trainerService).changePassword(username, "oldPass", "newPass");
+    }
+
+    @Test
+    void shouldActivateTrainer() {
+        String username = "Michael.Green";
+
+        gymFacade.activateTrainer(username);
+
+        verify(trainerService).activate(username);
+    }
+
+    @Test
+    void shouldDeactivateTrainer() {
+        String username = "Michael.Green";
+
+        gymFacade.deactivateTrainer(username);
+
+        verify(trainerService).deactivate(username);
+    }
+
+    @Test
     void shouldCreateTraining() {
         Training training = createTraining(1L, "Morning Fitness");
 
@@ -231,7 +321,6 @@ class GymFacadeTest {
     @Test
     void shouldGetTrainingById() {
         Training training = createTraining(1L, "Morning Fitness");
-
         when(trainingService.selectById(1L)).thenReturn(Optional.of(training));
 
         Optional<Training> result = gymFacade.getTraining(1L);
@@ -245,7 +334,6 @@ class GymFacadeTest {
     void shouldGetAllTrainings() {
         Training firstTraining = createTraining(1L, "Morning Fitness");
         Training secondTraining = createTraining(2L, "Evening Yoga");
-
         when(trainingService.selectAll()).thenReturn(List.of(firstTraining, secondTraining));
 
         List<Training> result = gymFacade.getAllTrainings();

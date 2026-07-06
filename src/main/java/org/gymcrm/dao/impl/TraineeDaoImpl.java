@@ -58,8 +58,10 @@ public class TraineeDaoImpl implements TraineeDao {
 
     @Override
     public List<Trainee> findAll() {
-        logger.debug("Fetching all trainees from database");
-        return getCurrentSession().createQuery("from Trainee", Trainee.class).getResultList();
+        logger.debug("Fetching all trainees with their user profiles from database");
+        return getCurrentSession()
+                .createQuery("from Trainee t join fetch t.user", Trainee.class)
+                .getResultList();
     }
 
     @Override

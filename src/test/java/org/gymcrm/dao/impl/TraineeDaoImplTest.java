@@ -1,16 +1,15 @@
 package org.gymcrm.dao.impl;
 
+import org.gymcrm.config.AppConfig;
+import org.gymcrm.dao.TraineeDao;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.model.User;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.query.Query;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -19,29 +18,19 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
+@SpringJUnitConfig(AppConfig.class)
+@Transactional
 class TraineeDaoImplTest {
 
-    @Mock
+    @Autowired
+    private TraineeDao traineeDao;
+
+    @Autowired
     private SessionFactory sessionFactory;
 
-    @Mock
-    private Session session;
-
-    @Mock
-    private Query<Trainee> traineeQuery;
-
-    @Mock
-    private Query<Long> countQuery;
-
-    @InjectMocks
-    private TraineeDaoImpl traineeDao;
-
-    @BeforeEach
-    void setUp() {
-        lenient().when(sessionFactory.getCurrentSession()).thenReturn(session);
+    private Session getCurrentSession() {
+        return sessionFactory.getCurrentSession();
     }
 
     @Test
@@ -50,106 +39,89 @@ class TraineeDaoImplTest {
 
         Trainee savedTrainee = traineeDao.save(trainee);
 
-        verify(session).persist(trainee);
-        assertEquals(trainee, savedTrainee);
+        assertNotNull(savedTrainee.getId());
+        assertEquals("John.Smith", savedTrainee.getUser().getUsername());
     }
 
     @Test
     void shouldUpdateTrainee() {
-        Trainee trainee = createTrainee(1L, "John.Smith");
-        when(session.merge(trainee)).thenReturn(trainee);
+        Trainee trainee = createTrainee(null, "John.Smith");
+        getCurrentSession().persist(trainee);
+        getCurrentSession().flush();
 
+        trainee.setAddress("Lviv");
         Trainee updatedTrainee = traineeDao.update(trainee);
 
-        verify(session).merge(trainee);
-        assertEquals(trainee, updatedTrainee);
+        assertEquals("Lviv", updatedTrainee.getAddress());
     }
 
     @Test
     void shouldDeleteTraineeByIdWhenExists() {
-        Long traineeId = 1L;
-        Trainee trainee = createTrainee(traineeId, "John.Smith");
-        when(session.get(Trainee.class, traineeId)).thenReturn(trainee);
+        Trainee trainee = createTrainee(null, "John.Smith");
+        getCurrentSession().persist(trainee);
+        getCurrentSession().flush();
 
-        boolean result = traineeDao.deleteById(traineeId);
+        boolean result = traineeDao.deleteById(trainee.getId());
 
-        verify(session).remove(trainee);
         assertTrue(result);
+        assertNull(getCurrentSession().get(Trainee.class, trainee.getId()));
     }
 
     @Test
     void shouldReturnFalseWhenDeletingNonExistingTrainee() {
-        Long traineeId = 99L;
-        when(session.get(Trainee.class, traineeId)).thenReturn(null);
-
-        boolean result = traineeDao.deleteById(traineeId);
-
-        verify(session, never()).remove(any());
+        boolean result = traineeDao.deleteById(999L);
         assertFalse(result);
     }
 
     @Test
     void shouldFindTraineeById() {
-        Long traineeId = 1L;
-        Trainee trainee = createTrainee(traineeId, "John.Smith");
-        when(session.get(Trainee.class, traineeId)).thenReturn(trainee);
+        Trainee trainee = createTrainee(null, "John.Smith");
+        getCurrentSession().persist(trainee);
+        getCurrentSession().flush();
 
-        Optional<Trainee> result = traineeDao.findById(traineeId);
+        Optional<Trainee> result = traineeDao.findById(trainee.getId());
 
         assertTrue(result.isPresent());
-        assertEquals(trainee, result.get());
+        assertEquals(trainee.getId(), result.get().getId());
     }
 
     @Test
     void shouldReturnEmptyOptionalWhenTraineeNotFound() {
-        Long traineeId = 99L;
-        when(session.get(Trainee.class, traineeId)).thenReturn(null);
-
-        Optional<Trainee> result = traineeDao.findById(traineeId);
-
+        Optional<Trainee> result = traineeDao.findById(999L);
         assertTrue(result.isEmpty());
-        assertEquals(Optional.empty(), result);
     }
 
     @Test
     void shouldFindAllTrainees() {
-        List<Trainee> trainees = List.of(createTrainee(1L, "John.Smith"), createTrainee(2L, "Anna.Brown"));
-        when(session.createQuery("from Trainee", Trainee.class)).thenReturn(traineeQuery);
-        when(traineeQuery.getResultList()).thenReturn(trainees);
+        getCurrentSession().persist(createTrainee(null, "John.Smith"));
+        getCurrentSession().persist(createTrainee(null, "Anna.Brown"));
+        getCurrentSession().flush();
 
         List<Trainee> result = traineeDao.findAll();
 
-        assertEquals(2, result.size());
-        verify(traineeQuery).getResultList();
+        assertTrue(result.size() >= 2);
     }
 
     @Test
     void shouldReturnTrueWhenUsernameExists() {
-        String username = "john.smith";
-        String hql = "select count(t) from Trainee t where lower(t.user.username) = lower(:username)";
-        when(session.createQuery(hql, Long.class)).thenReturn(countQuery);
-        when(countQuery.setParameter("username", username)).thenReturn(countQuery);
-        when(countQuery.uniqueResult()).thenReturn(1L);
+        Trainee trainee = createTrainee(null, "unique.user");
+        getCurrentSession().persist(trainee);
+        getCurrentSession().flush();
 
-        boolean exists = traineeDao.existsByUsername(username);
-
+        boolean exists = traineeDao.existsByUsername("unique.user");
         assertTrue(exists);
     }
 
     @Test
     void shouldFindByUsername() {
-        String username = "john.smith";
-        String hql = "FROM Trainee t JOIN FETCH t.user WHERE LOWER(t.user.username) = LOWER(:username)";
-        Trainee trainee = createTrainee(1L, username);
+        Trainee trainee = createTrainee(null, "find.me");
+        getCurrentSession().persist(trainee);
+        getCurrentSession().flush();
 
-        when(session.createQuery(hql, Trainee.class)).thenReturn(traineeQuery);
-        when(traineeQuery.setParameter("username", username)).thenReturn(traineeQuery);
-        when(traineeQuery.uniqueResultOptional()).thenReturn(Optional.of(trainee));
-
-        Optional<Trainee> result = traineeDao.findByUsername(username);
+        Optional<Trainee> result = traineeDao.findByUsername("find.me");
 
         assertTrue(result.isPresent());
-        assertEquals(trainee, result.get());
+        assertEquals("find.me", result.get().getUser().getUsername());
     }
 
     private Trainee createTrainee(Long id, String username) {

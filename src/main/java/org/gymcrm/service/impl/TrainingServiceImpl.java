@@ -1,5 +1,6 @@
 package org.gymcrm.service.impl;
 
+import org.gymcrm.annotation.RequireAuth;
 import org.gymcrm.dao.TrainingDao;
 import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.exception.ValidationException;
@@ -32,10 +33,56 @@ public class TrainingServiceImpl implements TrainingService {
     }
 
     @Override
+    @RequireAuth
     public Training create(Training training) {
+        validateTraining(training);
+        return trainingDao.save(training);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    @RequireAuth
+    public Optional<Training> selectById(Long id) {
+        return trainingDao.findById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    @RequireAuth
+    public List<Training> selectAll() {
+        return trainingDao.findAll();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    @RequireAuth
+    public List<Training> getTraineeTrainings(String username, LocalDate from, LocalDate to, String trainerName, String typeName) {
+        return trainingDao.findTraineeTrainings(username, from, to, trainerName, typeName);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    @RequireAuth
+    public List<Training> getTrainerTrainings(String username, LocalDate from, LocalDate to, String traineeName) {
+        return trainingDao.findTrainerTrainings(username, from, to, traineeName);
+    }
+
+    private void validateTraining(Training training) {
         if (training == null) {
-            logger.warn("Failed to create training: training is null");
-            throw new ValidationException("Training must not be null");
+            throw new ValidationException("Training data must not be null");
+        }
+
+        if (training.getTrainingName() == null || training.getTrainingName().isBlank()) {
+            throw new ValidationException("Training name is required and cannot be empty");
+        }
+        if (training.getTrainingDate() == null) {
+            throw new ValidationException("Training date is required");
+        }
+        if (training.getTrainingDuration() <= 0) {
+            throw new ValidationException("Training duration must be a positive number greater than zero");
+        }
+        if (training.getTrainingType() == null || training.getTrainingType().getId() == null) {
+            throw new ValidationException("Training type with a valid ID is required");
         }
 
         if (training.getTrainee() == null || training.getTrainee().getId() == null ||
@@ -49,31 +96,5 @@ public class TrainingServiceImpl implements TrainingService {
             logger.warn("Failed to create training: trainer does not exist");
             throw new EntityNotFoundException("Trainer does not exist");
         }
-
-        return trainingDao.save(training);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<Training> selectById(Long id) {
-        return trainingDao.findById(id);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Training> selectAll() {
-        return trainingDao.findAll();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Training> getTraineeTrainings(String username, LocalDate from, LocalDate to, String trainerName, String typeName) {
-        return trainingDao.findTraineeTrainings(username, from, to, trainerName, typeName);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Training> getTrainerTrainings(String username, LocalDate from, LocalDate to, String traineeName) {
-        return trainingDao.findTrainerTrainings(username, from, to, traineeName);
     }
 }

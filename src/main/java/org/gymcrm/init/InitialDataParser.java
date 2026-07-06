@@ -19,7 +19,14 @@ public class InitialDataParser {
 
         TrainingType type = new TrainingType();
         type.setId(parseLong(parts[1], "id"));
-        type.setTrainingTypeName(required(parts[2], "training type name"));
+        String typeNameStr = required(parts[2], "training type name").trim().toUpperCase();
+        try {
+            type.setTrainingTypeName(TrainingTypeEnum.valueOf(typeNameStr));
+        } catch (IllegalArgumentException e) {
+            throw new ValidationException("Unknown training type constant: '" + typeNameStr +
+                    "'. Please check TrainingTypeEnum for allowed constant values.", e);
+        }
+
         return type;
     }
 

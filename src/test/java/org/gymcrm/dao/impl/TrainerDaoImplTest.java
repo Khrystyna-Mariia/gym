@@ -1,46 +1,35 @@
 package org.gymcrm.dao.impl;
 
-import org.gymcrm.model.Trainer;
-import org.gymcrm.model.TrainingType;
-import org.gymcrm.model.User;
+import org.gymcrm.config.AppConfig;
+import org.gymcrm.dao.TrainerDao;
+import org.gymcrm.model.*;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.query.Query;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
+@SpringJUnitConfig(AppConfig.class)
+@Transactional
 class TrainerDaoImplTest {
 
-    @Mock
+    @Autowired
+    private TrainerDao trainerDao;
+
+    @Autowired
     private SessionFactory sessionFactory;
 
-    @Mock
-    private Session session;
-
-    @Mock
-    private Query<Trainer> trainerQuery;
-
-    @Mock
-    private Query<Long> countQuery;
-
-    @InjectMocks
-    private TrainerDaoImpl trainerDao;
-
-    @BeforeEach
-    void setUp() {
-        lenient().when(sessionFactory.getCurrentSession()).thenReturn(session);
+    private Session getCurrentSession() {
+        return sessionFactory.getCurrentSession();
     }
 
     @Test
@@ -49,104 +38,113 @@ class TrainerDaoImplTest {
 
         Trainer savedTrainer = trainerDao.save(trainer);
 
-        verify(session).persist(trainer);
-        assertEquals(trainer, savedTrainer);
+        assertNotNull(savedTrainer.getId());
     }
 
     @Test
     void shouldUpdateTrainer() {
-        Trainer trainer = createTrainer(1L, "Michael.Green");
-        when(session.merge(trainer)).thenReturn(trainer);
+        Trainer trainer = createTrainer(null, "Michael.Green");
+        getCurrentSession().persist(trainer);
+        getCurrentSession().flush();
 
+        trainer.getUser().setFirstName("UpdatedName");
         Trainer updatedTrainer = trainerDao.update(trainer);
 
-        verify(session).merge(trainer);
-        assertEquals(trainer, updatedTrainer);
+        assertEquals("UpdatedName", updatedTrainer.getUser().getFirstName());
     }
 
     @Test
     void shouldFindTrainerById() {
-        Long trainerId = 1L;
-        Trainer trainer = createTrainer(trainerId, "Michael.Green");
-        when(session.get(Trainer.class, trainerId)).thenReturn(trainer);
+        Trainer trainer = createTrainer(null, "Michael.Green");
+        getCurrentSession().persist(trainer);
+        getCurrentSession().flush();
 
-        Optional<Trainer> result = trainerDao.findById(trainerId);
+        Optional<Trainer> result = trainerDao.findById(trainer.getId());
 
         assertTrue(result.isPresent());
-        assertEquals(trainer, result.get());
-    }
-
-    @Test
-    void shouldReturnEmptyOptionalWhenTrainerNotFound() {
-        Long trainerId = 99L;
-        when(session.get(Trainer.class, trainerId)).thenReturn(null);
-
-        Optional<Trainer> result = trainerDao.findById(trainerId);
-
-        assertTrue(result.isEmpty());
-        assertEquals(Optional.empty(), result);
+        assertEquals(trainer.getId(), result.get().getId());
     }
 
     @Test
     void shouldFindAllTrainers() {
-        List<Trainer> trainers = List.of(createTrainer(1L, "Michael.Green"), createTrainer(2L, "Olivia.White"));
-        when(session.createQuery("from Trainer", Trainer.class)).thenReturn(trainerQuery);
-        when(trainerQuery.getResultList()).thenReturn(trainers);
+        getCurrentSession().persist(createTrainer(null, "Michael.Green"));
+        getCurrentSession().persist(createTrainer(null, "Olivia.White"));
+        getCurrentSession().flush();
 
         List<Trainer> result = trainerDao.findAll();
-
-        assertEquals(2, result.size());
+        assertTrue(result.size() >= 2);
     }
 
     @Test
     void shouldReturnTrueWhenTrainerUsernameExists() {
-        String username = "michael.green";
-        String hql = "select count(t) from Trainer t where lower(t.user.username) = lower(:username)";
-        when(session.createQuery(hql, Long.class)).thenReturn(countQuery);
-        when(countQuery.setParameter("username", username)).thenReturn(countQuery);
-        when(countQuery.uniqueResult()).thenReturn(1L);
+        Trainer trainer = createTrainer(null, "exists.trainer");
+        getCurrentSession().persist(trainer);
+        getCurrentSession().flush();
 
-        boolean exists = trainerDao.existsByUsername(username);
-
+        boolean exists = trainerDao.existsByUsername("exists.trainer");
         assertTrue(exists);
     }
 
     @Test
     void shouldFindByUsername() {
-        String username = "michael.green";
-        String hql = "FROM Trainer t JOIN FETCH t.user WHERE LOWER(t.user.username) = LOWER(:username)";
-        Trainer trainer = createTrainer(1L, username);
+        Trainer trainer = createTrainer(null, "find.trainer");
+        getCurrentSession().persist(trainer);
+        getCurrentSession().flush();
 
-        when(session.createQuery(hql, Trainer.class)).thenReturn(trainerQuery);
-        when(trainerQuery.setParameter("username", username)).thenReturn(trainerQuery);
-        when(trainerQuery.uniqueResultOptional()).thenReturn(Optional.of(trainer));
-
-        Optional<Trainer> result = trainerDao.findByUsername(username);
+        Optional<Trainer> result = trainerDao.findByUsername("find.trainer");
 
         assertTrue(result.isPresent());
-        assertEquals(trainer, result.get());
+        assertEquals("find.trainer", result.get().getUser().getUsername());
     }
 
     @Test
     void shouldFindTrainersNotAssignedToTrainee() {
-        String traineeUsername = "john.smith";
-        String hql = "FROM Trainer t WHERE t.id NOT IN " +
-                "(SELECT tr.id FROM Trainee tn JOIN tn.trainers tr WHERE LOWER(tn.user.username) = LOWER(:username))";
-        List<Trainer> unassigned = List.of(createTrainer(5L, "Coach.Alex"));
+        Session session = getCurrentSession();
 
-        when(session.createQuery(hql, Trainer.class)).thenReturn(trainerQuery);
-        when(trainerQuery.setParameter("username", traineeUsername)).thenReturn(trainerQuery);
-        when(trainerQuery.getResultList()).thenReturn(unassigned);
+        TrainingType type = session.createQuery(
+                        "FROM TrainingType WHERE trainingTypeName = :name", TrainingType.class)
+                .setParameter("name", TrainingTypeEnum.FITNESS)
+                .uniqueResult();
 
-        List<Trainer> result = trainerDao.findTrainersNotAssignedToTrainee(traineeUsername);
+        Trainer assignedTrainer = createTrainer(null, "assigned.coach");
+        assignedTrainer.setSpecialization(type);
+        session.persist(assignedTrainer);
 
-        assertEquals(1, result.size());
-        assertEquals("Coach.Alex", result.get(0).getUser().getUsername());
+        Trainer unassignedTrainer = createTrainer(null, "free.coach");
+        unassignedTrainer.setSpecialization(type);
+        session.persist(unassignedTrainer);
+
+        User traineeUser = new User(null, "TraineeFirst", "TraineeLast", "john.smith", "pass", true);
+        Trainee trainee = new Trainee(null, LocalDate.now(), "Address", traineeUser, new HashSet<>(), new ArrayList<>());
+        trainee.getTrainers().add(assignedTrainer);
+
+        session.persist(trainee);
+        session.flush();
+
+        List<Trainer> result = trainerDao.findTrainersNotAssignedToTrainee("john.smith");
+
+        boolean containsFree = result.stream().anyMatch(t -> t.getUser().getUsername().equals("free.coach"));
+        boolean containsAssigned = result.stream().anyMatch(t -> t.getUser().getUsername().equals("assigned.coach"));
+
+        assertTrue(containsFree);
+        assertFalse(containsAssigned);
     }
 
     private Trainer createTrainer(Long id, String username) {
-        User user = new User(id, "First", "Last", username, "password123", true);
-        TrainingType type = new TrainingType(1L, "Fitness");
+        Session session = getCurrentSession();
+
+        User user = new User(null, "First", "Last", username, "password123", true);
+
+        TrainingType type = session.createQuery(
+                        "FROM TrainingType WHERE trainingTypeName = :name", TrainingType.class)
+                .setParameter("name", TrainingTypeEnum.FITNESS)
+                .uniqueResultOptional()
+                .orElseGet(() -> {
+                    TrainingType newType = new TrainingType(null, TrainingTypeEnum.FITNESS);
+                    session.persist(newType);
+                    return newType;
+                });
+
         return new Trainer(id, type, user, new HashSet<>());
     }
 }

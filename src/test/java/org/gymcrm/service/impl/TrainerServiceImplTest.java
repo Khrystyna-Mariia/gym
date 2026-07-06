@@ -1,9 +1,11 @@
 package org.gymcrm.service.impl;
 
 import org.gymcrm.dao.TrainerDao;
+import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.TrainingType;
+import org.gymcrm.model.TrainingTypeEnum;
 import org.gymcrm.model.User;
 import org.gymcrm.service.UserProfileInitializer;
 import org.junit.jupiter.api.BeforeEach;
@@ -85,12 +87,22 @@ class TrainerServiceImplTest {
     void shouldUpdateTrainer() {
         Trainer trainer = createTrainer(1L, "Michael", "Green", "Michael.Green");
 
+        when(trainerDao.existsByUsername("Michael.Green")).thenReturn(true);
         when(trainerDao.update(trainer)).thenReturn(trainer);
 
         Trainer result = trainerService.update(trainer);
 
         assertEquals(trainer, result);
         verify(trainerDao).update(trainer);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenUpdatingNonExistentTrainer() {
+        Trainer trainer = createTrainer(1L, "Michael", "Green", "NonExistent.User");
+        when(trainerDao.existsByUsername("NonExistent.User")).thenReturn(false);
+
+        assertThrows(EntityNotFoundException.class, () -> trainerService.update(trainer));
+        verify(trainerDao, never()).update(any());
     }
 
     @Test
@@ -143,6 +155,11 @@ class TrainerServiceImplTest {
     }
 
     @Test
+    void shouldThrowExceptionWhenSelectByUsernameIsEmpty() {
+        assertThrows(ValidationException.class, () -> trainerService.selectByUsername("  "));
+    }
+
+    @Test
     void shouldGetUnassignedTrainers() {
         String traineeUsername = "john.smith";
         List<Trainer> unassigned = List.of(createTrainer(5L, "Coach", "Alex", "Coach.Alex"));
@@ -154,12 +171,81 @@ class TrainerServiceImplTest {
         verify(trainerDao).findTrainersNotAssignedToTrainee(traineeUsername);
     }
 
+    @Test
+    void shouldThrowExceptionWhenGetUnassignedTrainersUsernameIsEmpty() {
+        assertThrows(ValidationException.class, () -> trainerService.getUnassignedTrainers(""));
+    }
+
+    @Test
+    void shouldAuthenticateSuccessfully() {
+        Trainer trainer = createTrainer(1L, "Alex", "Brown", "alex.brown");
+        when(trainerDao.findByUsername("alex.brown")).thenReturn(Optional.of(trainer));
+
+        boolean result = trainerService.authenticate("alex.brown", "password123");
+
+        assertTrue(result);
+    }
+
+    @Test
+    void shouldFailAuthenticationWithWrongPassword() {
+        Trainer trainer = createTrainer(1L, "Alex", "Brown", "alex.brown");
+        when(trainerDao.findByUsername("alex.brown")).thenReturn(Optional.of(trainer));
+
+        boolean result = trainerService.authenticate("alex.brown", "wrong_password");
+
+        assertFalse(result);
+    }
+
+    @Test
+    void shouldChangePasswordSuccessfully() {
+        Trainer trainer = createTrainer(1L, "Alex", "Brown", "alex.brown");
+        when(trainerDao.findByUsername("alex.brown")).thenReturn(Optional.of(trainer));
+
+        trainerService.changePassword("alex.brown", "password123", "newPassword777");
+
+        assertEquals("newPassword777", trainer.getUser().getPassword());
+        verify(trainerDao).update(trainer);
+    }
+
+    @Test
+    void shouldActivateTrainerSuccessfully() {
+        Trainer trainer = createTrainer(1L, "Alex", "Brown", "alex.brown");
+        trainer.getUser().setActive(false);
+        when(trainerDao.findByUsername("alex.brown")).thenReturn(Optional.of(trainer));
+
+        trainerService.activate("alex.brown");
+
+        assertTrue(trainer.getUser().isActive());
+        verify(trainerDao).update(trainer);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTrainerAlreadyActive() {
+        Trainer trainer = createTrainer(1L, "Alex", "Brown", "alex.brown");
+        trainer.getUser().setActive(true);
+        when(trainerDao.findByUsername("alex.brown")).thenReturn(Optional.of(trainer));
+
+        assertThrows(ValidationException.class, () -> trainerService.activate("alex.brown"));
+    }
+
+    @Test
+    void shouldDeactivateTrainerSuccessfully() {
+        Trainer trainer = createTrainer(1L, "Alex", "Brown", "alex.brown");
+        trainer.getUser().setActive(true);
+        when(trainerDao.findByUsername("alex.brown")).thenReturn(Optional.of(trainer));
+
+        trainerService.deactivate("alex.brown");
+
+        assertFalse(trainer.getUser().isActive());
+        verify(trainerDao).update(trainer);
+    }
+
     private Trainer createTrainer(Long id, String firstName, String lastName, String username) {
         User user = new User(id, firstName, lastName, username, "password123", true);
         Trainer trainer = new Trainer();
         trainer.setId(id);
         trainer.setUser(user);
-        trainer.setSpecialization(new TrainingType(1L, "Fitness"));
+        trainer.setSpecialization(new TrainingType(1L, TrainingTypeEnum.FITNESS));
         return trainer;
     }
 }

@@ -3,10 +3,7 @@ package org.gymcrm.service.impl;
 import org.gymcrm.dao.TrainingDao;
 import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.exception.ValidationException;
-import org.gymcrm.model.Trainee;
-import org.gymcrm.model.Trainer;
-import org.gymcrm.model.Training;
-import org.gymcrm.model.TrainingType;
+import org.gymcrm.model.*;
 import org.gymcrm.service.TraineeService;
 import org.gymcrm.service.TrainerService;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,6 +63,15 @@ class TrainingServiceImplTest {
         verifyNoInteractions(trainingDao);
         verifyNoInteractions(traineeService);
         verifyNoInteractions(trainerService);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDurationIsInvalid() {
+        Training training = createTraining(null, "Invalid Duration");
+        training.setTrainingDuration(0);
+
+        assertThrows(ValidationException.class, () -> trainingService.create(training));
+        verifyNoInteractions(trainingDao);
     }
 
     @Test
@@ -134,6 +140,38 @@ class TrainingServiceImplTest {
         verify(trainingDao).findAll();
     }
 
+    @Test
+    void shouldGetTraineeTrainingsWithFilters() {
+        String username = "john.doe";
+        LocalDate from = LocalDate.of(2026, 1, 1);
+        LocalDate to = LocalDate.of(2026, 12, 31);
+        List<Training> expectedList = List.of(createTraining(1L, "Morning Fitness"));
+
+        when(trainingDao.findTraineeTrainings(username, from, to, "Coach Michael", "Fitness"))
+                .thenReturn(expectedList);
+
+        List<Training> result = trainingService.getTraineeTrainings(username, from, to, "Coach Michael", "Fitness");
+
+        assertEquals(1, result.size());
+        verify(trainingDao).findTraineeTrainings(username, from, to, "Coach Michael", "Fitness");
+    }
+
+    @Test
+    void shouldGetTrainerTrainingsWithFilters() {
+        String username = "coach.michael";
+        LocalDate from = LocalDate.of(2026, 6, 1);
+        LocalDate to = LocalDate.of(2026, 6, 30);
+        List<Training> expectedList = List.of(createTraining(2L, "Evening Yoga"));
+
+        when(trainingDao.findTrainerTrainings(username, from, to, "John Doe"))
+                .thenReturn(expectedList);
+
+        List<Training> result = trainingService.getTrainerTrainings(username, from, to, "John Doe");
+
+        assertEquals(1, result.size());
+        verify(trainingDao).findTrainerTrainings(username, from, to, "John Doe");
+    }
+
     private Training createTraining(Long id, String trainingName) {
         Trainee trainee = new Trainee();
         trainee.setId(1L);
@@ -143,7 +181,7 @@ class TrainingServiceImplTest {
 
         TrainingType type = new TrainingType();
         type.setId(1L);
-        type.setTrainingTypeName("Fitness");
+        type.setTrainingTypeName(TrainingTypeEnum.FITNESS);
 
         return new Training(
                 id,

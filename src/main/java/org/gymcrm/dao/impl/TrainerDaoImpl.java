@@ -11,6 +11,8 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+import static java.util.Collections.emptyList;
+
 @Repository
 public class TrainerDaoImpl implements TrainerDao {
     private static final Logger logger = LoggerFactory.getLogger(TrainerDaoImpl.class);
@@ -76,6 +78,23 @@ public class TrainerDaoImpl implements TrainerDao {
                 "(SELECT tr.id FROM Trainee tn JOIN tn.trainers tr WHERE LOWER(tn.user.username) = LOWER(:username))";
         return getCurrentSession().createQuery(hql, Trainer.class)
                 .setParameter("username", traineeUsername)
+                .getResultList();
+    }
+
+    @Override
+    public List<Trainer> findByUsernames(List<String> usernames) {
+        logger.debug("Finding trainers by usernames list size: {}", usernames != null ? usernames.size() : 0);
+        if (usernames == null || usernames.isEmpty()) {
+            return emptyList();
+        }
+
+        List<String> lowerUsernames = usernames.stream()
+                .map(String::toLowerCase)
+                .toList();
+
+        String hql = "FROM Trainer t JOIN FETCH t.user WHERE LOWER(t.user.username) IN (:usernames)";
+        return getCurrentSession().createQuery(hql, Trainer.class)
+                .setParameterList("usernames", lowerUsernames)
                 .getResultList();
     }
 }

@@ -2,6 +2,7 @@ package org.gymcrm.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnTransformer;
 
 @Entity
 @Table(name = "training_type")
@@ -15,7 +16,9 @@ public class TrainingType {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "training_type_name", nullable = false)
-    private String trainingTypeName;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "training_type_name", nullable = false, unique = true)
+    @ColumnTransformer(read = "UPPER(training_type_name)")
+    private TrainingTypeEnum trainingTypeName;
 
 }

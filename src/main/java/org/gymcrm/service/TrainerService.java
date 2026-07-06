@@ -17,4 +17,14 @@ public interface TrainerService {
     Optional<Trainer> selectByUsername(String username);
 
     List<Trainer> getUnassignedTrainers(String traineeUsername);
+
+    List<Trainer> selectByUsernames(List<String> usernames);
+
+    boolean authenticate(String username, String password);
+
+    void changePassword(String username, String oldPassword, String newPassword);
+
+    void activate(String username);
+
+    void deactivate(String username);
 }

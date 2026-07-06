@@ -38,9 +38,9 @@ public class GymFacade {
         return traineeService.update(trainee);
     }
 
-    public void deleteTrainee(Long id) {
-        logger.info("Facade: deleting trainee with id {}", id);
-        traineeService.delete(id);
+    public void deleteTrainee(String username) {
+        logger.info("Facade: deleting trainee with username {}", username);
+        traineeService.deleteByUsername(username);
     }
 
     public Optional<Trainee> getTrainee(Long id) {
@@ -56,6 +56,31 @@ public class GymFacade {
     public List<Trainee> getAllTrainees() {
         logger.info("Facade: retrieving all trainees");
         return traineeService.selectAll();
+    }
+
+    public boolean authenticateTrainee(String username, String password) {
+        logger.info("Facade: authenticating trainee {}", username);
+        return traineeService.authenticate(username, password);
+    }
+
+    public void changeTraineePassword(String username, String oldPassword, String newPassword) {
+        logger.info("Facade: changing password for trainee {}", username);
+        traineeService.changePassword(username, oldPassword, newPassword);
+    }
+
+    public void activateTrainee(String username) {
+        logger.info("Facade: activating trainee {}", username);
+        traineeService.activate(username);
+    }
+
+    public void deactivateTrainee(String username) {
+        logger.info("Facade: deactivating trainee {}", username);
+        traineeService.deactivate(username);
+    }
+
+    public void updateTraineeTrainersList(String traineeUsername, List<String> trainerUsernames) {
+        logger.info("Facade: updating trainers list for trainee {}", traineeUsername);
+        traineeService.updateTrainersList(traineeUsername, trainerUsernames);
     }
 
     public Trainer createTrainer(Trainer trainer) {
@@ -86,6 +111,26 @@ public class GymFacade {
     public List<Trainer> getUnassignedTrainers(String traineeUsername) {
         logger.info("Facade: retrieving unassigned trainers for trainee {}", traineeUsername);
         return trainerService.getUnassignedTrainers(traineeUsername);
+    }
+
+    public boolean authenticateTrainer(String username, String password) {
+        logger.info("Facade: authenticating trainer {}", username);
+        return trainerService.authenticate(username, password);
+    }
+
+    public void changeTrainerPassword(String username, String oldPassword, String newPassword) {
+        logger.info("Facade: changing password for trainer {}", username);
+        trainerService.changePassword(username, oldPassword, newPassword);
+    }
+
+    public void activateTrainer(String username) {
+        logger.info("Facade: activating trainer {}", username);
+        trainerService.activate(username);
+    }
+
+    public void deactivateTrainer(String username) {
+        logger.info("Facade: deactivating trainer {}", username);
+        trainerService.deactivate(username);
     }
 
     public Training createTraining(Training training) {

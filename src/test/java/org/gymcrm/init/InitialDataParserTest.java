@@ -1,10 +1,7 @@
 package org.gymcrm.init;
 
 import org.gymcrm.exception.ValidationException;
-import org.gymcrm.model.Trainee;
-import org.gymcrm.model.Trainer;
-import org.gymcrm.model.Training;
-import org.gymcrm.model.TrainingType;
+import org.gymcrm.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -27,7 +24,7 @@ class InitialDataParserTest {
         TrainingType result = parser.parseTrainingType(parts);
 
         assertEquals(1L, result.getId());
-        assertEquals("Fitness", result.getTrainingTypeName());
+        assertEquals(TrainingTypeEnum.FITNESS, result.getTrainingTypeName());
     }
 
     @Test
