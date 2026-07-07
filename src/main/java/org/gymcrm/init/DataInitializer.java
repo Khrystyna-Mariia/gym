@@ -60,78 +60,87 @@ public class DataInitializer {
         Map<Long, Trainer> trainerMap = new HashMap<>();
 
         try (Session session = sessionFactory.openSession()) {
-            Transaction tx = session.beginTransaction();
+            Transaction tx = null;
+            try {
+                tx = session.beginTransaction();
 
-            for (String line : lines) {
-                String[] parts = line.split(";", -1);
+                for (String line : lines) {
+                    String[] parts = line.split(";", -1);
 
-                if (parts.length == 0 || parts[0].isBlank()) {
-                    logger.warn("Skipping empty or invalid line during storage initialization");
-                    continue;
-                }
-
-                String recordType = parts[0];
-
-                switch (recordType) {
-                    case "TRAINING_TYPE" -> {
-                        Long fileId = initialDataParser.parseLong(parts[1], "training type id");
-                        TrainingType type = initialDataParser.parseTrainingType(parts);
-
-                        type.setId(null);
-
-                        session.persist(type);
-                        trainingTypeMap.put(fileId, type);
+                    if (parts.length == 0 || parts[0].isBlank()) {
+                        logger.warn("Skipping empty or invalid line during storage initialization");
+                        continue;
                     }
-                    case "TRAINEE" -> {
-                        Long fileId = initialDataParser.parseLong(parts[1], "trainee id");
-                        Trainee trainee = initialDataParser.parseTrainee(parts);
 
-                        session.persist(trainee);
-                        traineeMap.put(fileId, trainee);
-                    }
-                    case "TRAINER" -> {
-                        Long fileId = initialDataParser.parseLong(parts[1], "trainer id");
-                        Long fileSpecId = initialDataParser.parseLong(parts[7], "specialization id");
+                    String recordType = parts[0];
 
-                        Trainer trainer = initialDataParser.parseTrainer(parts);
-                        TrainingType managedSpec = trainingTypeMap.get(fileSpecId);
+                    switch (recordType) {
+                        case "TRAINING_TYPE" -> {
+                            Long fileId = initialDataParser.parseLong(parts[1], "training type id");
+                            TrainingType type = initialDataParser.parseTrainingType(parts);
 
-                        if (managedSpec == null) {
-                            throw new IllegalStateException("TrainingType with file ID " + fileSpecId + " not found for trainer");
+                            type.setId(null);
+
+                            session.persist(type);
+                            trainingTypeMap.put(fileId, type);
                         }
+                        case "TRAINEE" -> {
+                            Long fileId = initialDataParser.parseLong(parts[1], "trainee id");
+                            Trainee trainee = initialDataParser.parseTrainee(parts);
 
-                        trainer.setSpecialization(managedSpec);
-                        session.persist(trainer);
-                        trainerMap.put(fileId, trainer);
-                    }
-                    case "TRAINING" -> {
-                        Training training = initialDataParser.parseTraining(parts);
-
-                        Long fileTraineeId = initialDataParser.parseLong(parts[2], "trainee id");
-                        Long fileTrainerId = initialDataParser.parseLong(parts[3], "trainer id");
-                        Long fileTypeId = initialDataParser.parseLong(parts[5], "training type id");
-
-                        Trainee managedTrainee = traineeMap.get(fileTraineeId);
-                        Trainer managedTrainer = trainerMap.get(fileTrainerId);
-                        TrainingType managedType = trainingTypeMap.get(fileTypeId);
-
-                        if (managedTrainee == null || managedTrainer == null || managedType == null) {
-                            throw new IllegalStateException("Failed to bind relations for Training: missing referenced entities in seed data");
+                            session.persist(trainee);
+                            traineeMap.put(fileId, trainee);
                         }
+                        case "TRAINER" -> {
+                            Long fileId = initialDataParser.parseLong(parts[1], "trainer id");
+                            Long fileSpecId = initialDataParser.parseLong(parts[7], "specialization id");
 
-                        training.setTrainee(managedTrainee);
-                        training.setTrainer(managedTrainer);
-                        training.setTrainingType(managedType);
+                            Trainer trainer = initialDataParser.parseTrainer(parts);
+                            TrainingType managedSpec = trainingTypeMap.get(fileSpecId);
 
-                        training.setId(null);
+                            if (managedSpec == null) {
+                                throw new IllegalStateException("TrainingType with file ID " + fileSpecId + " not found for trainer");
+                            }
 
-                        session.persist(training);
+                            trainer.setSpecialization(managedSpec);
+                            session.persist(trainer);
+                            trainerMap.put(fileId, trainer);
+                        }
+                        case "TRAINING" -> {
+                            Training training = initialDataParser.parseTraining(parts);
+
+                            Long fileTraineeId = initialDataParser.parseLong(parts[2], "trainee id");
+                            Long fileTrainerId = initialDataParser.parseLong(parts[3], "trainer id");
+                            Long fileTypeId = initialDataParser.parseLong(parts[5], "training type id");
+
+                            Trainee managedTrainee = traineeMap.get(fileTraineeId);
+                            Trainer managedTrainer = trainerMap.get(fileTrainerId);
+                            TrainingType managedType = trainingTypeMap.get(fileTypeId);
+
+                            if (managedTrainee == null || managedTrainer == null || managedType == null) {
+                                throw new IllegalStateException("Failed to bind relations for Training: missing referenced entities in seed data");
+                            }
+
+                            training.setTrainee(managedTrainee);
+                            training.setTrainer(managedTrainer);
+                            training.setTrainingType(managedType);
+
+                            training.setId(null);
+
+                            session.persist(training);
+                        }
+                        default -> logger.warn("Unknown record type discovered during parsing: {}", recordType);
                     }
-                    default -> logger.warn("Unknown record type discovered during parsing: {}", recordType);
                 }
+                tx.commit();
+                logger.info("Database seeding finished successfully.");
+            } catch (Exception e) {
+                if (tx != null && tx.isActive()) {
+                    tx.rollback();
+                    logger.warn("Transaction rolled back successfully after a critical error during processing.");
+                }
+                throw e;
             }
-            tx.commit();
-            logger.info("Database seeding finished successfully.");
         } catch (Exception e) {
             logger.error("Database initialization aborted due to a critical error", e);
             throw new IllegalStateException("Database seeding failed", e);

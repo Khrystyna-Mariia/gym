@@ -49,7 +49,7 @@ public class TrainerDaoImpl implements TrainerDao {
     @Override
     public List<Trainer> findAll() {
         logger.debug("Fetching all trainers from database");
-        return getCurrentSession().createQuery("from Trainer", Trainer.class).getResultList();
+        return getCurrentSession().createQuery("from Trainer t join fetch t.user", Trainer.class).getResultList();
     }
 
     @Override
@@ -74,7 +74,7 @@ public class TrainerDaoImpl implements TrainerDao {
     @Override
     public List<Trainer> findTrainersNotAssignedToTrainee(String traineeUsername) {
         logger.debug("Finding trainers not assigned to trainee: {}", traineeUsername);
-        String hql = "FROM Trainer t WHERE t.id NOT IN " +
+        String hql = "FROM Trainer t JOIN FETCH t.user WHERE t.id NOT IN " +
                 "(SELECT tr.id FROM Trainee tn JOIN tn.trainers tr WHERE LOWER(tn.user.username) = LOWER(:username))";
         return getCurrentSession().createQuery(hql, Trainer.class)
                 .setParameter("username", traineeUsername)
