@@ -88,7 +88,6 @@ class SecurityAspectTest {
         UserContextHolder.setCredentials(username, password);
 
         when(traineeService.authenticate(username, password)).thenReturn(true);
-        when(trainerService.authenticate(username, password)).thenReturn(false);
 
         assertDoesNotThrow(() -> securityAspect.authenticate());
     }

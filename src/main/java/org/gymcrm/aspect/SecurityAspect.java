@@ -25,24 +25,34 @@ public class SecurityAspect {
 
     @Before("@annotation(org.gymcrm.annotation.RequireAuth)")
     public void authenticate() {
-        UserContextHolder.UserCredentials credentials = UserContextHolder.getCredentials();
+        var auth = UserContextHolder.getAuth();
+        if (auth != null && auth.isAuthenticated()) {
+            logger.debug("User '{}' authenticated in-memory with role '{}'", auth.username(), auth.role());
+            return;
+        }
 
-        if (credentials == null || credentials.username() == null || credentials.password() == null) {
-            logger.warn("Authentication failed: No credentials provided in UserContextHolder");
+        var creds = UserContextHolder.getCredentials();
+        if (creds == null || creds.username() == null || creds.password() == null) {
+            logger.warn("Authentication failed: no authenticated user or credentials in context");
             throw new AuthenticationException("Authentication failed: credentials missing");
         }
 
-        String username = credentials.username();
-        String password = credentials.password();
+        String username = creds.username();
+        String password = creds.password();
 
         boolean isTrainee = traineeService.authenticate(username, password);
-        boolean isTrainer = trainerService.authenticate(username, password);
+        String role = "TRAINEE";
 
-        if (!isTrainee && !isTrainer) {
-            logger.warn("Authentication failed for user: {}", username);
-            throw new AuthenticationException("Authentication failed: invalid username or password");
+        if (!isTrainee) {
+            boolean isTrainer = trainerService.authenticate(username, password);
+            if (!isTrainer) {
+                logger.warn("Authentication failed for user: {}", username);
+                throw new AuthenticationException("Authentication failed: invalid username or password");
+            }
+            role = "TRAINER";
         }
 
-        logger.debug("User '{}' successfully authenticated via AOP", username);
+        UserContextHolder.setAuthenticated(username, role);
+        logger.debug("User '{}' single-checked via DB and promoted to in-memory context as {}", username, role);
     }
 }

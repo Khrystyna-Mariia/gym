@@ -1,5 +1,6 @@
 package org.gymcrm.facade;
 
+import org.gymcrm.context.UserContextHolder;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.Training;
@@ -60,7 +61,13 @@ public class GymFacade {
 
     public boolean authenticateTrainee(String username, String password) {
         logger.info("Facade: authenticating trainee {}", username);
-        return traineeService.authenticate(username, password);
+        boolean ok = traineeService.authenticate(username, password);
+        if (ok) {
+            UserContextHolder.setAuthenticated(username, "TRAINEE");
+        } else {
+            UserContextHolder.clear();
+        }
+        return ok;
     }
 
     public void changeTraineePassword(String username, String oldPassword, String newPassword) {
@@ -115,7 +122,13 @@ public class GymFacade {
 
     public boolean authenticateTrainer(String username, String password) {
         logger.info("Facade: authenticating trainer {}", username);
-        return trainerService.authenticate(username, password);
+        boolean ok = trainerService.authenticate(username, password);
+        if (ok) {
+            UserContextHolder.setAuthenticated(username, "TRAINER");
+        } else {
+            UserContextHolder.clear();
+        }
+        return ok;
     }
 
     public void changeTrainerPassword(String username, String oldPassword, String newPassword) {
