@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -177,7 +178,7 @@ public class TraineeServiceImpl implements TraineeService {
             }
         }
 
-        trainee.setTrainers(new java.util.HashSet<>(trainers));
+        trainee.setTrainers(new HashSet<>(trainers));
         traineeDao.update(trainee);
         logger.info("Trainers list successfully updated for trainee: {}", traineeUsername);
     }

@@ -5,6 +5,7 @@ import org.gymcrm.model.Trainee;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -12,7 +13,7 @@ import java.util.Optional;
 
 @Repository
 public class TraineeDaoImpl implements TraineeDao {
-    private static final Logger logger = org.slf4j.LoggerFactory.getLogger(TraineeDaoImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(TraineeDaoImpl.class);
 
     private final SessionFactory sessionFactory;
 
