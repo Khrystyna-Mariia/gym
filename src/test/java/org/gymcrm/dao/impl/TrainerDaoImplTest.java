@@ -1,176 +1,150 @@
 package org.gymcrm.dao.impl;
 
-import org.gymcrm.exception.EntityNotFoundException;
-import org.gymcrm.model.Trainer;
-import org.gymcrm.model.TrainingType;
-import org.gymcrm.storage.InMemoryIdGenerator;
-import org.junit.jupiter.api.BeforeEach;
+import org.gymcrm.config.AppConfig;
+import org.gymcrm.dao.TrainerDao;
+import org.gymcrm.model.*;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringJUnitConfig(AppConfig.class)
+@Transactional
 class TrainerDaoImplTest {
-    private TrainerDaoImpl trainerDao;
-    private Map<Long, Trainer> trainerStorage;
-    private InMemoryIdGenerator idGenerator;
 
-    @BeforeEach
-    void setUp() {
-        trainerStorage = new HashMap<>();
-        idGenerator = new InMemoryIdGenerator();
+    @Autowired
+    private TrainerDao trainerDao;
 
-        trainerDao = new TrainerDaoImpl(trainerStorage, idGenerator);
+    @Autowired
+    private SessionFactory sessionFactory;
+
+    private Session getCurrentSession() {
+        return sessionFactory.getCurrentSession();
     }
 
     @Test
-    void shouldSaveTrainerWithExistingId() {
-        Trainer trainer = createTrainer(1L, "Michael", "Green");
+    void shouldSaveTrainer() {
+        Trainer trainer = createTrainer(null, "Michael.Green");
 
         Trainer savedTrainer = trainerDao.save(trainer);
 
-        assertEquals(trainer, savedTrainer);
-        assertEquals(1, trainerStorage.size());
-        assertTrue(trainerStorage.containsKey(1L));
+        assertNotNull(savedTrainer.getId());
     }
 
     @Test
-    void shouldGenerateIdWhenSavingTrainerWithoutId() {
-        Trainer existingTrainer = createTrainer(5L, "Michael", "Green");
-        trainerStorage.put(5L, existingTrainer);
-        idGenerator.initializeMaxTrainerId(existingTrainer.getUserId());
+    void shouldUpdateTrainer() {
+        Trainer trainer = createTrainer(null, "Michael.Green");
+        getCurrentSession().persist(trainer);
+        getCurrentSession().flush();
 
-        Trainer newTrainer = createTrainer(null, "Olivia", "White");
+        trainer.getUser().setFirstName("UpdatedName");
+        Trainer updatedTrainer = trainerDao.update(trainer);
 
-        Trainer savedTrainer = trainerDao.save(newTrainer);
-
-        assertEquals(6L, savedTrainer.getUserId());
-        assertEquals(2, trainerStorage.size());
-        assertTrue(trainerStorage.containsKey(6L));
-        assertEquals(newTrainer, trainerStorage.get(6L));
-    }
-
-    @Test
-    void shouldGenerateIdOneWhenStorageIsEmpty() {
-        Trainer trainer = createTrainer(null, "Olivia", "White");
-
-        Trainer savedTrainer = trainerDao.save(trainer);
-
-        assertEquals(1L, savedTrainer.getUserId());
-        assertEquals(1, trainerStorage.size());
-        assertTrue(trainerStorage.containsKey(1L));
-    }
-
-    @Test
-    void shouldNotRegenerateIdWhenSavingTrainerWithExistingId() {
-        Trainer trainer = createTrainer(10L, "Olivia", "White");
-
-        Trainer savedTrainer = trainerDao.save(trainer);
-
-        assertEquals(10L, savedTrainer.getUserId());
-        assertTrue(trainerStorage.containsKey(10L));
+        assertEquals("UpdatedName", updatedTrainer.getUser().getFirstName());
     }
 
     @Test
     void shouldFindTrainerById() {
-        Trainer trainer = createTrainer(1L, "Michael", "Green");
-        trainerStorage.put(1L, trainer);
+        Trainer trainer = createTrainer(null, "Michael.Green");
+        getCurrentSession().persist(trainer);
+        getCurrentSession().flush();
 
-        Optional<Trainer> result = trainerDao.findById(1L);
+        Optional<Trainer> result = trainerDao.findById(trainer.getId());
 
-        assertEquals(Optional.of(trainer), result);
-    }
-
-    @Test
-    void shouldReturnEmptyOptionalWhenTrainerNotFound() {
-        Optional<Trainer> result = trainerDao.findById(99L);
-
-        assertEquals(Optional.empty(), result);
+        assertTrue(result.isPresent());
+        assertEquals(trainer.getId(), result.get().getId());
     }
 
     @Test
     void shouldFindAllTrainers() {
-        Trainer firstTrainer = createTrainer(1L, "Michael", "Green");
-        Trainer secondTrainer = createTrainer(2L, "Olivia", "White");
-
-        trainerStorage.put(1L, firstTrainer);
-        trainerStorage.put(2L, secondTrainer);
+        getCurrentSession().persist(createTrainer(null, "Michael.Green"));
+        getCurrentSession().persist(createTrainer(null, "Olivia.White"));
+        getCurrentSession().flush();
 
         List<Trainer> result = trainerDao.findAll();
-
-        assertEquals(2, result.size());
-        assertTrue(result.contains(firstTrainer));
-        assertTrue(result.contains(secondTrainer));
+        assertTrue(result.size() >= 2);
     }
 
     @Test
-    void shouldUpdateExistingTrainer() {
-        Trainer oldTrainer = createTrainer(1L, "Michael", "Green");
-        trainerStorage.put(1L, oldTrainer);
+    void shouldReturnTrueWhenTrainerUsernameExists() {
+        Trainer trainer = createTrainer(null, "exists.trainer");
+        getCurrentSession().persist(trainer);
+        getCurrentSession().flush();
 
-        Trainer updatedTrainer = new Trainer(
-                1L,
-                "Michael",
-                "Green",
-                "Michael.Green",
-                "newPassword",
-                true,
-                new TrainingType(2L, "Yoga")
-        );
-
-        Trainer result = trainerDao.update(updatedTrainer);
-
-        assertEquals(updatedTrainer, result);
-        assertEquals(1L, result.getUserId());
-        assertEquals("Michael", result.getFirstName());
-        assertEquals("Green", result.getLastName());
-        assertEquals("Michael.Green", result.getUsername());
-        assertTrue(result.isActive());
-        assertEquals("Yoga", result.getSpecialization().getTrainingTypeName());
-        assertEquals(2L, result.getSpecialization().getId());
-
-        assertEquals("Yoga", trainerStorage.get(1L).getSpecialization().getTrainingTypeName());
+        boolean exists = trainerDao.existsByUsername("exists.trainer");
+        assertTrue(exists);
     }
 
     @Test
-    void shouldThrowExceptionWhenUpdatingNonExistingTrainer() {
-        Trainer trainer = createTrainer(99L, "Michael", "Green");
+    void shouldFindByUsername() {
+        Trainer trainer = createTrainer(null, "find.trainer");
+        getCurrentSession().persist(trainer);
+        getCurrentSession().flush();
 
-        assertThrows(EntityNotFoundException.class, () -> trainerDao.update(trainer));
+        Optional<Trainer> result = trainerDao.findByUsername("find.trainer");
+
+        assertTrue(result.isPresent());
+        assertEquals("find.trainer", result.get().getUser().getUsername());
     }
 
     @Test
-    void shouldContinueGeneratingUniqueIdAfterRemovingTrainer() {
-        Trainer firstTrainer = createTrainer(null, "Michael", "Green");
-        Trainer secondTrainer = createTrainer(null, "Olivia", "White");
+    void shouldFindTrainersNotAssignedToTrainee() {
+        Session session = getCurrentSession();
 
-        trainerDao.save(firstTrainer);
-        trainerDao.save(secondTrainer);
+        TrainingType type = session.createQuery(
+                        "FROM TrainingType WHERE trainingTypeName = :name", TrainingType.class)
+                .setParameter("name", TrainingTypeEnum.FITNESS)
+                .uniqueResult();
 
-        trainerStorage.remove(2L);
+        Trainer assignedTrainer = createTrainer(null, "assigned.coach");
+        assignedTrainer.setSpecialization(type);
+        session.persist(assignedTrainer);
 
-        Trainer thirdTrainer = createTrainer(null, "David", "Miller");
+        Trainer unassignedTrainer = createTrainer(null, "free.coach");
+        unassignedTrainer.setSpecialization(type);
+        session.persist(unassignedTrainer);
 
-        Trainer savedTrainer = trainerDao.save(thirdTrainer);
+        User traineeUser = new User(null, "TraineeFirst", "TraineeLast", "john.smith", "pass", true);
+        Trainee trainee = new Trainee(null, LocalDate.now(), "Address", traineeUser, new HashSet<>(), new ArrayList<>());
+        trainee.getTrainers().add(assignedTrainer);
 
-        assertEquals(3L, savedTrainer.getUserId());
-        assertFalse(trainerStorage.containsKey(2L));
-        assertTrue(trainerStorage.containsKey(3L));
+        session.persist(trainee);
+        session.flush();
+
+        List<Trainer> result = trainerDao.findTrainersNotAssignedToTrainee("john.smith");
+
+        boolean containsFree = result.stream().anyMatch(t -> t.getUser().getUsername().equals("free.coach"));
+        boolean containsAssigned = result.stream().anyMatch(t -> t.getUser().getUsername().equals("assigned.coach"));
+
+        assertTrue(containsFree);
+        assertFalse(containsAssigned);
     }
 
-    private Trainer createTrainer(Long userId, String firstName, String lastName) {
-        return new Trainer(
-                userId,
-                firstName,
-                lastName,
-                firstName + "." + lastName,
-                "password123",
-                true,
-                new TrainingType(1L, "Fitness")
-        );
+    private Trainer createTrainer(Long id, String username) {
+        Session session = getCurrentSession();
+
+        User user = new User(null, "First", "Last", username, "password123", true);
+
+        TrainingType type = session.createQuery(
+                        "FROM TrainingType WHERE trainingTypeName = :name", TrainingType.class)
+                .setParameter("name", TrainingTypeEnum.FITNESS)
+                .uniqueResultOptional()
+                .orElseGet(() -> {
+                    TrainingType newType = new TrainingType(null, TrainingTypeEnum.FITNESS);
+                    session.persist(newType);
+                    return newType;
+                });
+
+        return new Trainer(id, type, user, new HashSet<>());
     }
 }

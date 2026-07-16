@@ -3,10 +3,7 @@ package org.gymcrm.service.impl;
 import org.gymcrm.dao.TrainingDao;
 import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.exception.ValidationException;
-import org.gymcrm.model.Trainee;
-import org.gymcrm.model.Trainer;
-import org.gymcrm.model.Training;
-import org.gymcrm.model.TrainingType;
+import org.gymcrm.model.*;
 import org.gymcrm.service.TraineeService;
 import org.gymcrm.service.TrainerService;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,8 +42,8 @@ class TrainingServiceImplTest {
         Training newTraining = createTraining(null, "Evening Yoga");
         Training savedTraining = createTraining(2L, "Evening Yoga");
 
-        when(traineeService.selectById(1L)).thenReturn(Optional.of(createTrainee()));
-        when(trainerService.selectById(1L)).thenReturn(Optional.of(createTrainer()));
+        when(traineeService.selectById(1L)).thenReturn(Optional.of(new Trainee()));
+        when(trainerService.selectById(1L)).thenReturn(Optional.of(new Trainer()));
         when(trainingDao.save(newTraining)).thenReturn(savedTraining);
 
         Training result = trainingService.create(newTraining);
@@ -69,6 +66,15 @@ class TrainingServiceImplTest {
     }
 
     @Test
+    void shouldThrowExceptionWhenDurationIsInvalid() {
+        Training training = createTraining(null, "Invalid Duration");
+        training.setTrainingDuration(0);
+
+        assertThrows(ValidationException.class, () -> trainingService.create(training));
+        verifyNoInteractions(trainingDao);
+    }
+
+    @Test
     void shouldThrowExceptionWhenTraineeDoesNotExist() {
         Training training = createTraining(null, "Evening Yoga");
 
@@ -85,7 +91,7 @@ class TrainingServiceImplTest {
     void shouldThrowExceptionWhenTrainerDoesNotExist() {
         Training training = createTraining(null, "Evening Yoga");
 
-        when(traineeService.selectById(1L)).thenReturn(Optional.of(createTrainee()));
+        when(traineeService.selectById(1L)).thenReturn(Optional.of(new Trainee()));
         when(trainerService.selectById(1L)).thenReturn(Optional.empty());
 
         assertThrows(EntityNotFoundException.class, () -> trainingService.create(training));
@@ -134,40 +140,58 @@ class TrainingServiceImplTest {
         verify(trainingDao).findAll();
     }
 
+    @Test
+    void shouldGetTraineeTrainingsWithFilters() {
+        String username = "john.doe";
+        LocalDate from = LocalDate.of(2026, 1, 1);
+        LocalDate to = LocalDate.of(2026, 12, 31);
+        List<Training> expectedList = List.of(createTraining(1L, "Morning Fitness"));
+
+        when(trainingDao.findTraineeTrainings(username, from, to, "Coach Michael", "Fitness"))
+                .thenReturn(expectedList);
+
+        List<Training> result = trainingService.getTraineeTrainings(username, from, to, "Coach Michael", "Fitness");
+
+        assertEquals(1, result.size());
+        verify(trainingDao).findTraineeTrainings(username, from, to, "Coach Michael", "Fitness");
+    }
+
+    @Test
+    void shouldGetTrainerTrainingsWithFilters() {
+        String username = "coach.michael";
+        LocalDate from = LocalDate.of(2026, 6, 1);
+        LocalDate to = LocalDate.of(2026, 6, 30);
+        List<Training> expectedList = List.of(createTraining(2L, "Evening Yoga"));
+
+        when(trainingDao.findTrainerTrainings(username, from, to, "John Doe"))
+                .thenReturn(expectedList);
+
+        List<Training> result = trainingService.getTrainerTrainings(username, from, to, "John Doe");
+
+        assertEquals(1, result.size());
+        verify(trainingDao).findTrainerTrainings(username, from, to, "John Doe");
+    }
+
     private Training createTraining(Long id, String trainingName) {
+        Trainee trainee = new Trainee();
+        trainee.setId(1L);
+
+        Trainer trainer = new Trainer();
+        trainer.setId(1L);
+
+        TrainingType type = new TrainingType();
+        type.setId(1L);
+        type.setTrainingTypeName(TrainingTypeEnum.FITNESS);
+
         return new Training(
                 id,
-                1L,
-                1L,
+                trainee,
+                trainer,
                 trainingName,
-                1L,
+                type,
                 LocalDate.of(2026, 6, 24),
                 60
         );
     }
 
-    private Trainee createTrainee() {
-        return new Trainee(
-                1L,
-                "John",
-                "Smith",
-                "John.Smith",
-                "password123",
-                true,
-                LocalDate.of(2000, 1, 1),
-                "Kyiv"
-        );
-    }
-
-    private Trainer createTrainer() {
-        return new Trainer(
-                1L,
-                "Michael",
-                "Green",
-                "Michael.Green",
-                "password123",
-                true,
-                new TrainingType(1L, "Fitness")
-        );
-    }
 }

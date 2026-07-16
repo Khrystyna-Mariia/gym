@@ -1,29 +1,20 @@
-package org.gymcrm.storage;
+package org.gymcrm.init;
 
 import org.gymcrm.exception.ValidationException;
-import org.gymcrm.model.Trainee;
-import org.gymcrm.model.Trainer;
-import org.gymcrm.model.Training;
-import org.gymcrm.model.TrainingType;
+import org.gymcrm.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class InitialDataParserTest {
     private InitialDataParser parser;
-    private Map<Long, TrainingType> trainingTypeStorage;
 
     @BeforeEach
     void setUp() {
         parser = new InitialDataParser();
-
-        trainingTypeStorage = new HashMap<>();
-        trainingTypeStorage.put(1L, new TrainingType(1L, "Fitness"));
     }
 
     @Test
@@ -33,7 +24,7 @@ class InitialDataParserTest {
         TrainingType result = parser.parseTrainingType(parts);
 
         assertEquals(1L, result.getId());
-        assertEquals("Fitness", result.getTrainingTypeName());
+        assertEquals(TrainingTypeEnum.FITNESS, result.getTrainingTypeName());
     }
 
     @Test
@@ -52,12 +43,13 @@ class InitialDataParserTest {
 
         Trainee result = parser.parseTrainee(parts);
 
-        assertEquals(1L, result.getUserId());
-        assertEquals("Alex", result.getFirstName());
-        assertEquals("Gomez", result.getLastName());
-        assertEquals("Alex.Gomez", result.getUsername());
-        assertEquals("password123", result.getPassword());
-        assertTrue(result.isActive());
+        assertNotNull(result);
+        assertNotNull(result.getUser());
+        assertEquals("Alex", result.getUser().getFirstName());
+        assertEquals("Gomez", result.getUser().getLastName());
+        assertEquals("Alex.Gomez", result.getUser().getUsername());
+        assertEquals("password123", result.getUser().getPassword());
+        assertTrue(result.getUser().isActive());
         assertEquals(LocalDate.of(2000, 5, 15), result.getDateOfBirth());
         assertEquals("Kyiv", result.getAddress());
     }
@@ -75,16 +67,15 @@ class InitialDataParserTest {
                 "1"
         };
 
-        Trainer result = parser.parseTrainer(parts, trainingTypeStorage);
+        Trainer result = parser.parseTrainer(parts);
 
-        assertEquals(1L, result.getUserId());
-        assertEquals("David", result.getFirstName());
-        assertEquals("Miller", result.getLastName());
-        assertEquals("David.Miller", result.getUsername());
-        assertEquals("password789", result.getPassword());
-        assertTrue(result.isActive());
-        assertEquals(1L, result.getSpecialization().getId());
-        assertEquals("Fitness", result.getSpecialization().getTrainingTypeName());
+        assertNotNull(result);
+        assertNotNull(result.getUser());
+        assertEquals("David", result.getUser().getFirstName());
+        assertEquals("Miller", result.getUser().getLastName());
+        assertEquals("David.Miller", result.getUser().getUsername());
+        assertEquals("password789", result.getUser().getPassword());
+        assertTrue(result.getUser().isActive());
     }
 
     @Test
@@ -102,11 +93,8 @@ class InitialDataParserTest {
 
         Training result = parser.parseTraining(parts);
 
-        assertEquals(1L, result.getId());
-        assertEquals(1L, result.getTraineeId());
-        assertEquals(1L, result.getTrainerId());
+        assertNotNull(result);
         assertEquals("Morning Fitness", result.getTrainingName());
-        assertEquals(1L, result.getTrainingTypeId());
         assertEquals(LocalDate.of(2026, 6, 23), result.getTrainingDate());
         assertEquals(60, result.getTrainingDuration());
     }
@@ -201,19 +189,4 @@ class InitialDataParserTest {
         assertThrows(ValidationException.class, () -> parser.parseTrainee(parts));
     }
 
-    @Test
-    void shouldThrowExceptionWhenTrainerSpecializationDoesNotExist() {
-        String[] parts = {
-                "TRAINER",
-                "1",
-                "David",
-                "Miller",
-                "David.Miller",
-                "password789",
-                "true",
-                "99"
-        };
-
-        assertThrows(ValidationException.class, () -> parser.parseTrainer(parts, trainingTypeStorage));
-    }
 }

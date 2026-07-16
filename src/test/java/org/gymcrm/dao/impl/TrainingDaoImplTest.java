@@ -1,139 +1,129 @@
 package org.gymcrm.dao.impl;
 
-import org.gymcrm.model.Training;
-import org.gymcrm.storage.InMemoryIdGenerator;
-import org.junit.jupiter.api.BeforeEach;
+import org.gymcrm.config.AppConfig;
+import org.gymcrm.dao.TrainingDao;
+import org.gymcrm.model.*;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringJUnitConfig(AppConfig.class)
+@Transactional
 class TrainingDaoImplTest {
-    private TrainingDaoImpl trainingDao;
-    private Map<Long, Training> trainingStorage;
-    private InMemoryIdGenerator idGenerator;
 
-    @BeforeEach
-    void setUp() {
-        trainingStorage = new HashMap<>();
-        idGenerator = new InMemoryIdGenerator();
+    @Autowired
+    private TrainingDao trainingDao;
 
-        trainingDao = new TrainingDaoImpl(trainingStorage, idGenerator);
+    @Autowired
+    private SessionFactory sessionFactory;
+
+    private Session getCurrentSession() {
+        return sessionFactory.getCurrentSession();
     }
 
     @Test
-    void shouldSaveTrainingWithExistingId() {
-        Training training = createTraining(1L, "Morning Fitness");
-
-        Training savedTraining = trainingDao.save(training);
-
-        assertEquals(training, savedTraining);
-        assertEquals(1, trainingStorage.size());
-        assertTrue(trainingStorage.containsKey(1L));
-    }
-
-    @Test
-    void shouldGenerateIdWhenSavingTrainingWithoutId() {
-        Training existingTraining = createTraining(5L, "Morning Fitness");
-        trainingStorage.put(5L, existingTraining);
-        idGenerator.initializeMaxTrainingId(existingTraining.getId());
-
-        Training newTraining = createTraining(null, "Evening Yoga");
-
-        Training savedTraining = trainingDao.save(newTraining);
-
-        assertEquals(6L, savedTraining.getId());
-        assertEquals(2, trainingStorage.size());
-        assertTrue(trainingStorage.containsKey(6L));
-        assertEquals(newTraining, trainingStorage.get(6L));
-    }
-
-    @Test
-    void shouldGenerateIdOneWhenStorageIsEmpty() {
-        Training training = createTraining(null, "Evening Yoga");
-
-        Training savedTraining = trainingDao.save(training);
-
-        assertEquals(1L, savedTraining.getId());
-        assertEquals(1, trainingStorage.size());
-        assertTrue(trainingStorage.containsKey(1L));
-    }
-
-    @Test
-    void shouldNotRegenerateIdWhenSavingTrainingWithExistingId() {
-        Training training = createTraining(10L, "Evening Yoga");
-
-        Training savedTraining = trainingDao.save(training);
-
-        assertEquals(10L, savedTraining.getId());
-        assertTrue(trainingStorage.containsKey(10L));
+    void shouldSaveTraining() {
+        Training training = createAndPersistFullTraining("trainee1", "trainer1", "Cardio", LocalDate.now());
+        assertNotNull(training.getId());
     }
 
     @Test
     void shouldFindTrainingById() {
-        Training training = createTraining(1L, "Morning Fitness");
-        trainingStorage.put(1L, training);
+        Training training = createAndPersistFullTraining("trainee2", "trainer2", "Yoga", LocalDate.now());
 
-        Optional<Training> result = trainingDao.findById(1L);
+        var result = trainingDao.findById(training.getId());
 
-        assertEquals(Optional.of(training), result);
-    }
-
-    @Test
-    void shouldReturnEmptyOptionalWhenTrainingNotFound() {
-        Optional<Training> result = trainingDao.findById(99L);
-
-        assertEquals(Optional.empty(), result);
+        assertTrue(result.isPresent());
+        assertEquals(training.getTrainingName(), result.get().getTrainingName());
     }
 
     @Test
     void shouldFindAllTrainings() {
-        Training firstTraining = createTraining(1L, "Morning Fitness");
-        Training secondTraining = createTraining(2L, "Evening Yoga");
-
-        trainingStorage.put(1L, firstTraining);
-        trainingStorage.put(2L, secondTraining);
+        createAndPersistFullTraining("trainee3", "trainer3", "T1", LocalDate.now());
+        createAndPersistFullTraining("trainee4", "trainer4", "T2", LocalDate.now());
 
         List<Training> result = trainingDao.findAll();
-
-        assertEquals(2, result.size());
-        assertTrue(result.contains(firstTraining));
-        assertTrue(result.contains(secondTraining));
+        assertTrue(result.size() >= 2);
     }
 
     @Test
-    void shouldContinueGeneratingUniqueIdAfterRemovingTraining() {
-        Training firstTraining = createTraining(null, "Morning Fitness");
-        Training secondTraining = createTraining(null, "Evening Yoga");
+    void shouldFindTraineeTrainingsWithFilters() {
+        String traineeUsername = "john.smith";
+        LocalDate targetDate = LocalDate.of(2026, 5, 15);
 
-        trainingDao.save(firstTraining);
-        trainingDao.save(secondTraining);
+        Training matching = createAndPersistFullTraining(traineeUsername, "jack.trainer", "Fitness Class", targetDate);
 
-        trainingStorage.remove(2L);
+        matching.getTrainer().getUser().setFirstName("Jack");
 
-        Training thirdTraining = createTraining(null, "Strength Training");
+        matching.getTrainingType().setTrainingTypeName(TrainingTypeEnum.FITNESS);
 
-        Training savedTraining = trainingDao.save(thirdTraining);
+        getCurrentSession().flush();
 
-        assertEquals(3L, savedTraining.getId());
-        assertFalse(trainingStorage.containsKey(2L));
-        assertTrue(trainingStorage.containsKey(3L));
+        List<Training> result = trainingDao.findTraineeTrainings(
+                traineeUsername,
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 12, 31),
+                "Jack",
+                "Fitness"
+        );
+
+        assertFalse(result.isEmpty());
+        assertEquals("Fitness Class", result.get(0).getTrainingName());
     }
 
-    private Training createTraining(Long id, String trainingName) {
-        return new Training(
-                id,
-                1L,
-                1L,
-                trainingName,
-                1L,
-                LocalDate.of(2026, 6, 24),
-                60
+    @Test
+    void shouldFindTrainerTrainingsWithFilters() {
+        String trainerUsername = "michael.green";
+        LocalDate targetDate = LocalDate.of(2026, 7, 10);
+
+        createAndPersistFullTraining("some.trainee", trainerUsername, "Heavy Lift", targetDate);
+
+        List<Training> result = trainingDao.findTrainerTrainings(
+                trainerUsername,
+                LocalDate.of(2026, 7, 1),
+                LocalDate.of(2026, 7, 30),
+                "TraineeFN"
         );
+
+        assertEquals(1, result.size());
+        assertEquals("Heavy Lift", result.get(0).getTrainingName());
+    }
+
+    private Training createAndPersistFullTraining(String traineeUser, String trainerUser, String trainingName, LocalDate date) {
+        Session session = getCurrentSession();
+
+        User u1 = new User(null, "TraineeFN", "TraineeLN", traineeUser, "pass", true);
+        Trainee trainee = new Trainee(null, LocalDate.of(2000, 1, 1), "Kyiv", u1, new HashSet<>(), new ArrayList<>());
+        session.persist(trainee);
+
+        TrainingType type = session.createQuery(
+                        "FROM TrainingType WHERE trainingTypeName = :name", TrainingType.class)
+                .setParameter("name", TrainingTypeEnum.FITNESS)
+                .uniqueResultOptional()
+                .orElseGet(() -> {
+                    TrainingType newType = new TrainingType(null, TrainingTypeEnum.FITNESS);
+                    session.persist(newType);
+                    return newType;
+                });
+
+        User u2 = new User(null, "TrainerFN", "TrainerLN", trainerUser, "pass", true);
+        Trainer trainer = new Trainer(null, type, u2, new HashSet<>());
+        session.persist(trainer);
+
+        Training training = new Training(null, trainee, trainer, trainingName, type, date, 60);
+        session.persist(training);
+        session.flush();
+
+        return training;
     }
 }

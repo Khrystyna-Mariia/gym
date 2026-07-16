@@ -1,191 +1,131 @@
 package org.gymcrm.dao.impl;
 
-import org.gymcrm.exception.EntityNotFoundException;
+import org.gymcrm.config.AppConfig;
+import org.gymcrm.dao.TraineeDao;
 import org.gymcrm.model.Trainee;
-import org.gymcrm.storage.InMemoryIdGenerator;
-import org.junit.jupiter.api.BeforeEach;
+import org.gymcrm.model.User;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringJUnitConfig(AppConfig.class)
+@Transactional
 class TraineeDaoImplTest {
-    private TraineeDaoImpl traineeDao;
-    private Map<Long, Trainee> traineeStorage;
-    private InMemoryIdGenerator idGenerator;
 
-    @BeforeEach
-    void setUp() {
-        traineeStorage = new HashMap<>();
-        idGenerator = new InMemoryIdGenerator();
+    @Autowired
+    private TraineeDao traineeDao;
 
-        traineeDao = new TraineeDaoImpl(traineeStorage, idGenerator);
+    @Autowired
+    private SessionFactory sessionFactory;
+
+    private Session getCurrentSession() {
+        return sessionFactory.getCurrentSession();
     }
 
     @Test
-    void shouldSaveTraineeWithExistingId() {
-        Trainee trainee = createTrainee(1L, "John", "Smith");
+    void shouldSaveTrainee() {
+        Trainee trainee = createTrainee(null, "John.Smith");
 
         Trainee savedTrainee = traineeDao.save(trainee);
 
-        assertEquals(trainee, savedTrainee);
-        assertEquals(1, traineeStorage.size());
-        assertTrue(traineeStorage.containsKey(1L));
-        assertEquals("John.Smith", traineeStorage.get(1L).getUsername());
+        assertNotNull(savedTrainee.getId());
+        assertEquals("John.Smith", savedTrainee.getUser().getUsername());
     }
 
     @Test
-    void shouldGenerateIdWhenSavingTraineeWithoutId() {
-        Trainee existingTrainee = createTrainee(5L, "John", "Smith");
-        traineeStorage.put(5L, existingTrainee);
-        idGenerator.initializeMaxTraineeId(existingTrainee.getUserId());
+    void shouldUpdateTrainee() {
+        Trainee trainee = createTrainee(null, "John.Smith");
+        getCurrentSession().persist(trainee);
+        getCurrentSession().flush();
 
-        Trainee newTrainee = createTrainee(null, "Anna", "Brown");
+        trainee.setAddress("Lviv");
+        Trainee updatedTrainee = traineeDao.update(trainee);
 
-        Trainee savedTrainee = traineeDao.save(newTrainee);
-
-        assertEquals(6L, savedTrainee.getUserId());
-        assertEquals(2, traineeStorage.size());
-        assertTrue(traineeStorage.containsKey(6L));
-        assertEquals(newTrainee, traineeStorage.get(6L));
+        assertEquals("Lviv", updatedTrainee.getAddress());
     }
 
     @Test
-    void shouldGenerateIdOneWhenStorageIsEmpty() {
-        Trainee trainee = createTrainee(null, "Anna", "Brown");
+    void shouldDeleteTraineeByIdWhenExists() {
+        Trainee trainee = createTrainee(null, "John.Smith");
+        getCurrentSession().persist(trainee);
+        getCurrentSession().flush();
 
-        Trainee savedTrainee = traineeDao.save(trainee);
+        boolean result = traineeDao.deleteById(trainee.getId());
 
-        assertEquals(1L, savedTrainee.getUserId());
-        assertEquals(1, traineeStorage.size());
-        assertTrue(traineeStorage.containsKey(1L));
+        assertTrue(result);
+        assertNull(getCurrentSession().get(Trainee.class, trainee.getId()));
     }
 
     @Test
-    void shouldNotRegenerateIdWhenSavingTraineeWithExistingId() {
-        Trainee trainee = createTrainee(10L, "Anna", "Brown");
-
-        Trainee savedTrainee = traineeDao.save(trainee);
-
-        assertEquals(10L, savedTrainee.getUserId());
-        assertTrue(traineeStorage.containsKey(10L));
+    void shouldReturnFalseWhenDeletingNonExistingTrainee() {
+        boolean result = traineeDao.deleteById(999L);
+        assertFalse(result);
     }
 
     @Test
     void shouldFindTraineeById() {
-        Trainee trainee = createTrainee(1L, "John", "Smith");
-        traineeStorage.put(1L, trainee);
+        Trainee trainee = createTrainee(null, "John.Smith");
+        getCurrentSession().persist(trainee);
+        getCurrentSession().flush();
 
-        Optional<Trainee> result = traineeDao.findById(1L);
+        Optional<Trainee> result = traineeDao.findById(trainee.getId());
 
-        assertEquals(Optional.of(trainee), result);
+        assertTrue(result.isPresent());
+        assertEquals(trainee.getId(), result.get().getId());
     }
 
     @Test
     void shouldReturnEmptyOptionalWhenTraineeNotFound() {
-        Optional<Trainee> result = traineeDao.findById(99L);
-
-        assertEquals(Optional.empty(), result);
+        Optional<Trainee> result = traineeDao.findById(999L);
+        assertTrue(result.isEmpty());
     }
 
     @Test
     void shouldFindAllTrainees() {
-        Trainee firstTrainee = createTrainee(1L, "John", "Smith");
-        Trainee secondTrainee = createTrainee(2L, "Anna", "Brown");
-
-        traineeStorage.put(1L, firstTrainee);
-        traineeStorage.put(2L, secondTrainee);
+        getCurrentSession().persist(createTrainee(null, "John.Smith"));
+        getCurrentSession().persist(createTrainee(null, "Anna.Brown"));
+        getCurrentSession().flush();
 
         List<Trainee> result = traineeDao.findAll();
 
-        assertEquals(2, result.size());
-        assertTrue(result.contains(firstTrainee));
-        assertTrue(result.contains(secondTrainee));
+        assertTrue(result.size() >= 2);
     }
 
     @Test
-    void shouldUpdateExistingTrainee() {
-        Trainee oldTrainee = createTrainee(1L, "John", "Smith");
-        traineeStorage.put(1L, oldTrainee);
+    void shouldReturnTrueWhenUsernameExists() {
+        Trainee trainee = createTrainee(null, "unique.user");
+        getCurrentSession().persist(trainee);
+        getCurrentSession().flush();
 
-        Trainee updatedTrainee = new Trainee(
-                1L,
-                "John",
-                "Smith",
-                "John.Smith",
-                "newPassword",
-                true,
-                LocalDate.of(2001, 5, 10),
-                "Lviv"
-        );
-
-        Trainee result = traineeDao.update(updatedTrainee);
-
-        assertEquals(updatedTrainee, result);
-        assertEquals(1L, result.getUserId());
-        assertEquals("John", result.getFirstName());
-        assertEquals("Smith", result.getLastName());
-        assertEquals("John.Smith", result.getUsername());
-        assertTrue(result.isActive());
-        assertEquals("Lviv", result.getAddress());
-        assertEquals(LocalDate.of(2001, 5, 10), result.getDateOfBirth());
-
-        assertEquals("Lviv", traineeStorage.get(1L).getAddress());
-        assertEquals(LocalDate.of(2001, 5, 10), traineeStorage.get(1L).getDateOfBirth());
+        boolean exists = traineeDao.existsByUsername("unique.user");
+        assertTrue(exists);
     }
 
     @Test
-    void shouldThrowExceptionWhenUpdatingNonExistingTrainee() {
-        Trainee trainee = createTrainee(99L, "John", "Smith");
+    void shouldFindByUsername() {
+        Trainee trainee = createTrainee(null, "find.me");
+        getCurrentSession().persist(trainee);
+        getCurrentSession().flush();
 
-        assertThrows(EntityNotFoundException.class, () -> traineeDao.update(trainee));
+        Optional<Trainee> result = traineeDao.findByUsername("find.me");
+
+        assertTrue(result.isPresent());
+        assertEquals("find.me", result.get().getUser().getUsername());
     }
 
-    @Test
-    void shouldDeleteTraineeById() {
-        Trainee trainee = createTrainee(1L, "John", "Smith");
-        traineeStorage.put(1L, trainee);
-
-        traineeDao.deleteById(1L);
-
-        assertFalse(traineeStorage.containsKey(1L));
-        assertTrue(traineeStorage.isEmpty());
-    }
-
-    @Test
-    void shouldContinueGeneratingUniqueIdAfterDeletingTrainee() {
-        Trainee firstTrainee = createTrainee(null, "John", "Smith");
-        Trainee secondTrainee = createTrainee(null, "Anna", "Brown");
-
-        traineeDao.save(firstTrainee);
-        traineeDao.save(secondTrainee);
-
-        traineeDao.deleteById(2L);
-
-        Trainee thirdTrainee = createTrainee(null, "Olivia", "White");
-
-        Trainee savedTrainee = traineeDao.save(thirdTrainee);
-
-        assertEquals(3L, savedTrainee.getUserId());
-        assertFalse(traineeStorage.containsKey(2L));
-        assertTrue(traineeStorage.containsKey(3L));
-    }
-
-    private Trainee createTrainee(Long userId, String firstName, String lastName) {
-        return new Trainee(
-                userId,
-                firstName,
-                lastName,
-                firstName + "." + lastName,
-                "password123",
-                true,
-                LocalDate.of(2000, 1, 1),
-                "Kyiv"
-        );
+    private Trainee createTrainee(Long id, String username) {
+        User user = new User(id, "First", "Last", username, "password123", true);
+        return new Trainee(id, LocalDate.of(2000, 1, 1), "Kyiv", user, new HashSet<>(), new ArrayList<>());
     }
 }

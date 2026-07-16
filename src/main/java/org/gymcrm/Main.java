@@ -1,74 +1,85 @@
 package org.gymcrm;
 
 import org.gymcrm.config.AppConfig;
+import org.gymcrm.context.UserContextHolder;
+import org.gymcrm.exception.AuthenticationException;
 import org.gymcrm.facade.GymFacade;
-import org.gymcrm.model.Trainee;
-import org.gymcrm.model.Trainer;
-import org.gymcrm.model.Training;
-import org.gymcrm.model.TrainingType;
+import org.gymcrm.model.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import java.time.LocalDate;
 
 public class Main {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+
     public static void main(String[] args) {
         try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class)) {
-            // Application logic can be added here
             GymFacade gymCrmFacade = context.getBean(GymFacade.class);
 
-            System.out.println("Initial trainees:");
-            gymCrmFacade.getAllTrainees().forEach(System.out::println);
+            logger.info("Registering new Trainee");
+            User userTrainee = new User();
+            userTrainee.setFirstName("John");
+            userTrainee.setLastName("Smith");
 
-            Trainee newTrainee = new Trainee(
-                    null,
-                    "John",
-                    "Smith",
-                    null,
-                    null,
-                    true,
-                    LocalDate.of(2001, 3, 10),
-                    "Ternopil"
-            );
+            Trainee newTrainee = new Trainee();
+            newTrainee.setUser(userTrainee);
+            newTrainee.setDateOfBirth(LocalDate.of(2001, 3, 10));
+            newTrainee.setAddress("Ternopil");
 
-            gymCrmFacade.createTrainee(newTrainee);
+            Trainee createdTrainee = gymCrmFacade.createTrainee(newTrainee);
 
-            System.out.println("\nTrainees after creating new trainee:");
-            gymCrmFacade.getAllTrainees().forEach(System.out::println);
+            String traineeUsername = createdTrainee.getUser().getUsername();
+            String traineePassword = createdTrainee.getUser().getPassword();
+            logger.info("Successfully registered! Username: {}, Password: {}", traineeUsername, traineePassword);
 
-            Trainer newTrainer = new Trainer(
-                    null,
-                    "John",
-                    "Smith",
-                    null,
-                    null,
-                    true,
-                    new TrainingType(3L, "Strength")
-            );
+            UserContextHolder.setCredentials(traineeUsername, traineePassword);
 
-            gymCrmFacade.createTrainer(newTrainer);
+            try {
+                logger.info("Accessing Protected Data (getAllTrainees)");
+                gymCrmFacade.getAllTrainees().forEach(t ->
+                        logger.info("Trainee found - Username: {}, Name: {} {}",
+                                t.getUser().getUsername(), t.getUser().getFirstName(), t.getUser().getLastName())
+                );
 
-            System.out.println("\nTrainers after creating new trainer:");
-            gymCrmFacade.getAllTrainers().forEach(System.out::println);
+                logger.info("Registering new Trainer");
+                User userTrainer = new User();
+                userTrainer.setFirstName("Alex");
+                userTrainer.setLastName("Brown");
 
-            Training newTraining = new Training(
-                    null,
-                    3L,
-                    3L,
-                    "Personal Strength Training",
-                    3L,
-                    LocalDate.of(2026, 6, 30),
-                    90
-            );
+                Trainer trainerModel = new Trainer();
+                trainerModel.setUser(userTrainer);
 
-            gymCrmFacade.createTraining(newTraining);
+                TrainingType spec = new TrainingType();
+                spec.setId(1L);
+                trainerModel.setSpecialization(spec);
 
-            System.out.println("\nTrainings after creating new training:");
-            gymCrmFacade.getAllTrainings().forEach(System.out::println);
+                Trainer createdTrainer = gymCrmFacade.createTrainer(trainerModel);
+                logger.info("Trainer registered with username: {}", createdTrainer.getUser().getUsername());
 
-            System.out.println("\nSelect trainee by id 3:");
-            gymCrmFacade.getTrainee(3L).ifPresent(System.out::println);
+                logger.info("Creating Training Session (Protected)");
+                Training newTraining = new Training();
+                newTraining.setTrainee(createdTrainee);
+                newTraining.setTrainer(createdTrainer);
+                newTraining.setTrainingType(spec);
+                newTraining.setTrainingName("Personal Strength Training");
+                newTraining.setTrainingDate(LocalDate.of(2026, 6, 30));
+                newTraining.setTrainingDuration(90);
 
-            System.out.println("\nGym CRM Application finished successfully.");
+                gymCrmFacade.createTraining(newTraining);
+                logger.info("Training session 'Personal Strength Training' created successfully!");
+
+            } finally {
+                UserContextHolder.clear();
+                logger.debug("Security context cleared from ThreadLocal.");
+            }
+
+            logger.info("Gym CRM Application finished successfully.");
+        } catch (AuthenticationException e) {
+            logger.warn("Security Violation: {}", e.getMessage());
+        } catch (Exception e) {
+            logger.error("Application encountered an unexpected error during execution", e);
         }
     }
 }
