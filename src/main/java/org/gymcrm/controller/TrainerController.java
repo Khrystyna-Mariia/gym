@@ -57,7 +57,7 @@ public class TrainerController {
 
     @GetMapping("/{username}")
     @Operation(summary = "Get trainer profile by username")
-    public TrainerProfileResponse getProfile(@PathVariable String username) {
+    public TrainerProfileResponse getProfile(@PathVariable("username") String username) {
         Trainer trainer = trainerService.selectByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Trainer with username " + username + " not found"));
         return trainerMapper.toProfileResponse(trainer);
@@ -65,7 +65,7 @@ public class TrainerController {
 
     @PutMapping("/{username}")
     @Operation(summary = "Update trainer profile", description = "Specialization is read-only and cannot be changed")
-    public UpdateTrainerProfileResponse updateProfile(@PathVariable String username,
+    public UpdateTrainerProfileResponse updateProfile(@PathVariable("username") String username,
                                                       @Valid @RequestBody UpdateTrainerProfileRequest request) {
         requireUsernameMatch(username, request.username());
         Trainer trainer = trainerService.selectByUsername(username)
@@ -78,19 +78,19 @@ public class TrainerController {
     @GetMapping("/{username}/trainings")
     @Operation(summary = "Get trainer's trainings list with optional filters")
     public List<TrainerTrainingResponse> getTrainings(
-            @PathVariable String username,
+            @PathVariable("username") String username,
             @Parameter(description = "Period start date, inclusive")
-            @RequestParam(required = false) LocalDate periodFrom,
+            @RequestParam(name="periodFrom", required = false) LocalDate periodFrom,
             @Parameter(description = "Period end date, inclusive")
-            @RequestParam(required = false) LocalDate periodTo,
-            @RequestParam(required = false) String traineeName) {
+            @RequestParam(name="periodTo", required = false) LocalDate periodTo,
+            @RequestParam(name="traineeName", required = false) String traineeName) {
         return trainingMapper.toTrainerTrainingResponseList(
                 trainingService.getTrainerTrainings(username, periodFrom, periodTo, traineeName));
     }
 
     @PatchMapping("/{username}/status")
     @Operation(summary = "Activate or deactivate trainer account", description = "Not idempotent")
-    public void updateStatus(@PathVariable String username, @Valid @RequestBody ActivateDeactivateRequest request) {
+    public void updateStatus(@PathVariable("username") String username, @Valid @RequestBody ActivateDeactivateRequest request) {
         requireUsernameMatch(username, request.username());
         if (Boolean.TRUE.equals(request.isActive())) {
             trainerService.activate(username);
