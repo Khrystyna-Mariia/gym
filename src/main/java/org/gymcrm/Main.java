@@ -1,5 +1,6 @@
 package org.gymcrm;
 
+import jakarta.servlet.Filter;
 import org.apache.catalina.Context;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.tomcat.util.descriptor.web.FilterDef;
@@ -7,6 +8,8 @@ import org.apache.tomcat.util.descriptor.web.FilterMap;
 import org.gymcrm.config.AppConfig;
 import org.gymcrm.config.WebConfig;
 import org.gymcrm.filter.AuthenticationContextFilter;
+import org.gymcrm.filter.RestCallLoggingFilter;
+import org.gymcrm.filter.TransactionLogFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
@@ -36,15 +39,9 @@ public class Main {
             String docBase = new File(".").getAbsolutePath();
             Context context = tomcat.addContext("", docBase);
 
-            FilterDef filterDef = new FilterDef();
-            filterDef.setFilterName("authenticationContextFilter");
-            filterDef.setFilterClass(AuthenticationContextFilter.class.getName());
-            context.addFilterDef(filterDef);
-
-            FilterMap filterMap = new FilterMap();
-            filterMap.setFilterName("authenticationContextFilter");
-            filterMap.addURLPattern("/*");
-            context.addFilterMap(filterMap);
+            registerFilter(context, "transactionLogFilter", TransactionLogFilter.class, "/*");
+            registerFilter(context, "authenticationContextFilter", AuthenticationContextFilter.class, "/*");
+            registerFilter(context, "restCallLoggingFilter", RestCallLoggingFilter.class, "/*");
 
             context.setParentClassLoader(Thread.currentThread().getContextClassLoader());
 
@@ -79,5 +76,17 @@ public class Main {
         } catch (Exception e) {
             logger.error("Failed to start Embedded Tomcat server", e);
         }
+    }
+
+    private static void registerFilter(Context context, String name, Class<? extends Filter> filterClass, String urlPattern) {
+        FilterDef filterDef = new FilterDef();
+        filterDef.setFilterName(name);
+        filterDef.setFilterClass(filterClass.getName());
+        context.addFilterDef(filterDef);
+
+        FilterMap filterMap = new FilterMap();
+        filterMap.setFilterName(name);
+        filterMap.addURLPattern(urlPattern);
+        context.addFilterMap(filterMap);
     }
 }
