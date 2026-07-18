@@ -2,8 +2,11 @@ package org.gymcrm;
 
 import org.apache.catalina.Context;
 import org.apache.catalina.startup.Tomcat;
+import org.apache.tomcat.util.descriptor.web.FilterDef;
+import org.apache.tomcat.util.descriptor.web.FilterMap;
 import org.gymcrm.config.AppConfig;
 import org.gymcrm.config.WebConfig;
+import org.gymcrm.filter.AuthenticationContextFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
@@ -32,6 +35,16 @@ public class Main {
 
             String docBase = new File(".").getAbsolutePath();
             Context context = tomcat.addContext("", docBase);
+
+            FilterDef filterDef = new FilterDef();
+            filterDef.setFilterName("authenticationContextFilter");
+            filterDef.setFilterClass(AuthenticationContextFilter.class.getName());
+            context.addFilterDef(filterDef);
+
+            FilterMap filterMap = new FilterMap();
+            filterMap.setFilterName("authenticationContextFilter");
+            filterMap.addURLPattern("/*");
+            context.addFilterMap(filterMap);
 
             context.setParentClassLoader(Thread.currentThread().getContextClassLoader());
 

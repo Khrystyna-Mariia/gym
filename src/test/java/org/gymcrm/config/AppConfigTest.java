@@ -3,7 +3,6 @@ package org.gymcrm.config;
 import org.gymcrm.dao.TraineeDao;
 import org.gymcrm.dao.TrainerDao;
 import org.gymcrm.dao.TrainingDao;
-import org.gymcrm.facade.GymFacade;
 import org.gymcrm.init.InitialDataParser;
 import org.gymcrm.service.TraineeService;
 import org.gymcrm.service.TrainerService;
@@ -40,9 +39,6 @@ class AppConfigTest {
     private TrainingService trainingService;
 
     @Autowired
-    private GymFacade gymFacade;
-
-    @Autowired
     private InitialDataParser initialDataParser;
 
     @Test
@@ -62,11 +58,5 @@ class AppConfigTest {
         assertNotNull(traineeService);
         assertNotNull(trainerService);
         assertNotNull(trainingService);
-    }
-
-    @Test
-    void shouldCreateFacadeAndParserBeans() {
-        assertNotNull(gymFacade);
-        assertNotNull(initialDataParser);
     }
 }
