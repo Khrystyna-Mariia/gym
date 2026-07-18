@@ -7,13 +7,19 @@ import org.gymcrm.dto.response.TrainingTypeResponse;
 import org.gymcrm.model.Training;
 import org.gymcrm.model.TrainingType;
 import org.gymcrm.model.User;
-import org.mapstruct.*;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+@Mapper(componentModel = "spring")
 public interface TrainingMapper {
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "trainee", ignore = true)
+    @Mapping(target = "trainer", ignore = true)
+    @Mapping(target = "trainingType", ignore = true)
     Training toEntity(AddTrainingRequest request);
 
     @Mapping(target = "trainingType", source = "trainingType.trainingTypeName")
