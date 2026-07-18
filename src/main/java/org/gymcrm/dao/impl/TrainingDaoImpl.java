@@ -50,7 +50,15 @@ public class TrainingDaoImpl implements TrainingDao {
     public List<Training> findTraineeTrainings(String username, LocalDate fromDate, LocalDate toDate, String trainerName, String trainingTypeName) {
         logger.debug("Filtering trainee trainings for username '{}'", username);
 
-        StringBuilder hql = new StringBuilder("FROM Training t WHERE LOWER(t.trainee.user.username) = LOWER(:username)");
+        StringBuilder hql = new StringBuilder(
+                "FROM Training t " +
+                        "JOIN FETCH t.trainee tn " +
+                        "JOIN FETCH tn.user tnu " +
+                        "JOIN FETCH t.trainer tr " +
+                        "JOIN FETCH tr.user tru " +
+                        "JOIN FETCH t.trainingType tt " +
+                        "WHERE LOWER(tnu.username) = LOWER(:username)"
+        );
 
         if (fromDate != null) hql.append(" AND t.trainingDate >= :fromDate");
         if (toDate != null) hql.append(" AND t.trainingDate <= :toDate");
@@ -76,7 +84,15 @@ public class TrainingDaoImpl implements TrainingDao {
     public List<Training> findTrainerTrainings(String username, LocalDate fromDate, LocalDate toDate, String traineeName) {
         logger.debug("Filtering trainer trainings for username '{}'", username);
 
-        StringBuilder hql = new StringBuilder("FROM Training t WHERE LOWER(t.trainer.user.username) = LOWER(:username)");
+        StringBuilder hql = new StringBuilder(
+                "FROM Training t " +
+                        "JOIN FETCH t.trainer tr " +
+                        "JOIN FETCH tr.user tru " +
+                        "JOIN FETCH t.trainee tn " +
+                        "JOIN FETCH tn.user tnu " +
+                        "JOIN FETCH t.trainingType tt " +
+                        "WHERE LOWER(tru.username) = LOWER(:username)"
+        );
 
         if (fromDate != null) hql.append(" AND t.trainingDate >= :fromDate");
         if (toDate != null) hql.append(" AND t.trainingDate <= :toDate");
