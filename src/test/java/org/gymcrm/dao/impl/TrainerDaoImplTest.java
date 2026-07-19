@@ -147,4 +147,42 @@ class TrainerDaoImplTest {
 
         return new Trainer(id, type, user, new HashSet<>());
     }
+
+    @Test
+    void shouldReturnFalseWhenTrainerUsernameDoesNotExist() {
+        // Перевіряємо протилежну гілку для existsByUsername
+        boolean exists = trainerDao.existsByUsername("non.existent.trainer");
+        assertFalse(exists);
+    }
+
+    @Test
+    void shouldFindTrainersByUsernames() {
+        getCurrentSession().persist(createTrainer(null, "trainer.one"));
+        getCurrentSession().persist(createTrainer(null, "trainer.two"));
+        getCurrentSession().persist(createTrainer(null, "trainer.three"));
+        getCurrentSession().flush();
+
+        List<Trainer> result = trainerDao.findByUsernames(List.of("trainer.one", "trainer.three"));
+
+        assertEquals(2, result.size());
+        boolean hasTrainerOne = result.stream().anyMatch(t -> t.getUser().getUsername().equals("trainer.one"));
+        boolean hasTrainerThree = result.stream().anyMatch(t -> t.getUser().getUsername().equals("trainer.three"));
+
+        assertTrue(hasTrainerOne);
+        assertTrue(hasTrainerThree);
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenUsernamesListIsEmpty() {
+        List<Trainer> result = trainerDao.findByUsernames(List.of());
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenUsernamesListIsNull() {
+        List<Trainer> result = trainerDao.findByUsernames(null);
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
 }

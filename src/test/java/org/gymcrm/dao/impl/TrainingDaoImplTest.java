@@ -126,4 +126,28 @@ class TrainingDaoImplTest {
 
         return training;
     }
+
+    @Test
+    void shouldFindTraineeTrainingsWithNullFilters() {
+        String traineeUsername = "john.smith";
+        createAndPersistFullTraining(traineeUsername, "jack.trainer", "Fitness Class", LocalDate.now());
+
+        List<Training> result = trainingDao.findTraineeTrainings(
+                traineeUsername, null, null, null, null
+        );
+
+        assertFalse(result.isEmpty());
+    }
+
+    @Test
+    void shouldFindTrainerTrainingsWithNullFilters() {
+        String trainerUsername = "michael.green";
+        createAndPersistFullTraining("some.trainee", trainerUsername, "Heavy Lift", LocalDate.now());
+
+        List<Training> result = trainingDao.findTrainerTrainings(
+                trainerUsername, null, null, null
+        );
+
+        assertFalse(result.isEmpty());
+    }
 }

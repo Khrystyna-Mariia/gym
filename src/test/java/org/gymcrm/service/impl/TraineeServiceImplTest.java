@@ -246,6 +246,135 @@ class TraineeServiceImplTest {
         verify(traineeDao).update(trainee);
     }
 
+    @Test
+    void validateTrainee_shouldThrowWhenUpdateAndIdNull() {
+        Trainee trainee = createTrainee(null, "John", "Smith", "john.smith");
+        assertThrows(ValidationException.class, () -> traineeService.update(trainee));
+    }
+
+    @Test
+    void validateTrainee_shouldThrowWhenFirstNameNullOrBlank() {
+        Trainee nullName = createTrainee(1L, null, "Smith", "john.smith");
+        assertThrows(ValidationException.class, () -> traineeService.create(nullName));
+
+        Trainee blankName = createTrainee(1L, "   ", "Smith", "john.smith");
+        assertThrows(ValidationException.class, () -> traineeService.create(blankName));
+    }
+
+    @Test
+    void validateTrainee_shouldThrowWhenLastNameNullOrBlank() {
+        Trainee nullLastName = createTrainee(1L, "John", null, "john.smith");
+        assertThrows(ValidationException.class, () -> traineeService.create(nullLastName));
+    }
+
+    @Test
+    void validateTrainee_shouldThrowWhenUpdateAndUsernameNullOrBlank() {
+        Trainee nullUsername = createTrainee(1L, "John", "Smith", null);
+        assertThrows(ValidationException.class, () -> traineeService.update(nullUsername));
+    }
+
+    @Test
+    void authenticate_shouldReturnFalseWhenArgsNull() {
+        assertFalse(traineeService.authenticate(null, "password"));
+        assertFalse(traineeService.authenticate("username", null));
+    }
+
+    @Test
+    void authenticate_shouldReturnFalseWhenTraineeNotFound() {
+        when(traineeDao.findByUsername("ghost")).thenReturn(Optional.empty());
+        assertFalse(traineeService.authenticate("ghost", "password"));
+    }
+
+    @Test
+    void deleteByUsername_shouldThrowWhenUsernameNullOrBlank() {
+        assertThrows(ValidationException.class, () -> traineeService.deleteByUsername(null));
+        assertThrows(ValidationException.class, () -> traineeService.deleteByUsername(""));
+    }
+
+    @Test
+    void deleteByUsername_shouldThrowWhenNotFound() {
+        when(traineeDao.findByUsername("ghost")).thenReturn(Optional.empty());
+        assertThrows(EntityNotFoundException.class, () -> traineeService.deleteByUsername("ghost"));
+    }
+
+    @Test
+    void changePassword_shouldThrowWhenNewPasswordNullOrBlank() {
+        assertThrows(ValidationException.class, () -> traineeService.changePassword("user", "old", null));
+        assertThrows(ValidationException.class, () -> traineeService.changePassword("user", "old", "  "));
+    }
+
+    @Test
+    void changePassword_shouldThrowWhenNotFound() {
+        when(traineeDao.findByUsername("ghost")).thenReturn(Optional.empty());
+        assertThrows(EntityNotFoundException.class, () -> traineeService.changePassword("ghost", "old", "new"));
+    }
+
+    @Test
+    void changePassword_shouldThrowWhenOldPasswordMismatches() {
+        Trainee trainee = createTrainee(1L, "John", "Smith", "john.smith");
+        when(traineeDao.findByUsername("john.smith")).thenReturn(Optional.of(trainee));
+
+        assertThrows(ValidationException.class, () -> traineeService.changePassword("john.smith", "wrong_old_pass", "newPass"));
+    }
+
+    @Test
+    void activate_shouldThrowWhenNotFound() {
+        when(traineeDao.findByUsername("ghost")).thenReturn(Optional.empty());
+        assertThrows(EntityNotFoundException.class, () -> traineeService.activate("ghost"));
+    }
+
+    @Test
+    void activate_shouldThrowWhenAlreadyActive() {
+        Trainee trainee = createTrainee(1L, "John", "Smith", "john.smith");
+        trainee.getUser().setActive(true);
+        when(traineeDao.findByUsername("john.smith")).thenReturn(Optional.of(trainee));
+
+        assertThrows(ValidationException.class, () -> traineeService.activate("john.smith"));
+    }
+
+    @Test
+    void deactivate_shouldThrowWhenNotFound() {
+        when(traineeDao.findByUsername("ghost")).thenReturn(Optional.empty());
+        assertThrows(EntityNotFoundException.class, () -> traineeService.deactivate("ghost"));
+    }
+
+    @Test
+    void deactivate_shouldThrowWhenAlreadyInactive() {
+        Trainee trainee = createTrainee(1L, "John", "Smith", "john.smith");
+        trainee.getUser().setActive(false);
+        when(traineeDao.findByUsername("john.smith")).thenReturn(Optional.of(trainee));
+
+        assertThrows(ValidationException.class, () -> traineeService.deactivate("john.smith"));
+    }
+
+    @Test
+    void updateTrainersList_shouldThrowWhenArgsNull() {
+        assertThrows(ValidationException.class, () -> traineeService.updateTrainersList(null, List.of("trainer")));
+        assertThrows(ValidationException.class, () -> traineeService.updateTrainersList("user", null));
+    }
+
+    @Test
+    void updateTrainersList_shouldThrowWhenTraineeNotFound() {
+        when(traineeDao.findByUsername("ghost")).thenReturn(Optional.empty());
+        assertThrows(EntityNotFoundException.class, () -> traineeService.updateTrainersList("ghost", List.of("trainer")));
+    }
+
+    @Test
+    void updateTrainersList_shouldThrowWhenSomeTrainerNotFound() {
+        Trainee trainee = createTrainee(1L, "John", "Smith", "john.smith");
+        when(traineeDao.findByUsername("john.smith")).thenReturn(Optional.of(trainee));
+
+        Trainer existingTrainer = new Trainer();
+        existingTrainer.setUser(new User(10L, "Jack", "Coach", "trainer.jack", "pass", true));
+
+        List<String> requestedUsernames = List.of("trainer.jack", "missing.trainer");
+        when(trainerService.selectByUsernames(requestedUsernames)).thenReturn(List.of(existingTrainer));
+
+        assertThrows(EntityNotFoundException.class, () ->
+                traineeService.updateTrainersList("john.smith", requestedUsernames)
+        );
+    }
+
     private Trainee createTrainee(Long id, String firstName, String lastName, String username) {
         User user = new User(id, firstName, lastName, username, "password123", true);
         Trainee trainee = new Trainee();
