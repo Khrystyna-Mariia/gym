@@ -85,7 +85,7 @@ class AuthControllerTest {
                 {"username":"john.doe","oldPassword":"old123","newPassword":"new456"}
                 """;
 
-        mockMvc.perform(put("/api/v1/auth/login")
+        mockMvc.perform(put("/api/v1/auth/password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk());
@@ -103,7 +103,7 @@ class AuthControllerTest {
             {"username":"anna.k","oldPassword":"old123","newPassword":"new456"}
             """;
 
-        mockMvc.perform(put("/api/v1/auth/login")
+        mockMvc.perform(put("/api/v1/auth/password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk());
@@ -120,7 +120,7 @@ class AuthControllerTest {
                 {"username":"ghost","oldPassword":"old123","newPassword":"new456"}
                 """;
 
-        mockMvc.perform(put("/api/v1/auth/login")
+        mockMvc.perform(put("/api/v1/auth/password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isNotFound());

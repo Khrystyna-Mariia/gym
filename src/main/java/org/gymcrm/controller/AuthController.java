@@ -35,9 +35,9 @@ public class AuthController {
         }
     }
 
-    @PutMapping("/login")
+    @PutMapping("/password")
     @Operation(summary = "Change password for a trainee or trainer account")
-    public void changeLogin(@Valid @RequestBody ChangeLoginRequest request) {
+    public void changePassword(@Valid @RequestBody ChangeLoginRequest request) {
         String username = request.username();
 
         if (traineeService.selectByUsername(username).isPresent()) {
