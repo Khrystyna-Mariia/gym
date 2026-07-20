@@ -58,8 +58,13 @@ public class RestCallLoggingFilter extends OncePerRequestFilter {
         if (content == null || content.length == 0) {
             return "-";
         }
-        int length = Math.min(content.length, MAX_PAYLOAD_LENGTH);
-        return new String(content, 0, length, StandardCharsets.UTF_8);
+
+        String fullPayload = new String(content, StandardCharsets.UTF_8);
+
+        if (fullPayload.length() <= MAX_PAYLOAD_LENGTH) {
+            return fullPayload;
+        }
+        return fullPayload.substring(0, MAX_PAYLOAD_LENGTH);
     }
 
     private String mask(String payload) {
