@@ -65,7 +65,10 @@ public class TrainerDaoImpl implements TrainerDao {
     @Override
     public Optional<Trainer> findByUsername(String username) {
         logger.debug("Finding trainer by username: {}", username);
-        String hql = "FROM Trainer t JOIN FETCH t.user WHERE LOWER(t.user.username) = LOWER(:username)";
+        String hql = "FROM Trainer t " +
+                "JOIN FETCH t.user " +
+                "LEFT JOIN FETCH t.trainees " +
+                "WHERE LOWER(t.user.username) = LOWER(:username)";
         return getCurrentSession().createQuery(hql, Trainer.class)
                 .setParameter("username", username)
                 .uniqueResultOptional();

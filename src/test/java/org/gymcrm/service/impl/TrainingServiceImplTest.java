@@ -172,6 +172,69 @@ class TrainingServiceImplTest {
         verify(trainingDao).findTrainerTrainings(username, from, to, "John Doe");
     }
 
+    @Test
+    void shouldThrowExceptionWhenTrainingNameIsMissing() {
+        Training t1 = createTraining(null, null);
+        Training t2 = createTraining(null, "   ");
+
+        assertThrows(ValidationException.class, () -> trainingService.create(t1));
+        assertThrows(ValidationException.class, () -> trainingService.create(t2));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTrainingDateIsNull() {
+        Training training = createTraining(null, "Yoga");
+        training.setTrainingDate(null);
+
+        assertThrows(ValidationException.class, () -> trainingService.create(training));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDurationIsNegative() {
+        Training training = createTraining(null, "Yoga");
+        training.setTrainingDuration(-10);
+
+        assertThrows(ValidationException.class, () -> trainingService.create(training));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTrainingTypeOrItsIdIsNull() {
+        Training t1 = createTraining(null, "Yoga");
+        t1.setTrainingType(null);
+
+        Training t2 = createTraining(null, "Yoga");
+        t2.getTrainingType().setId(null);
+
+        assertThrows(ValidationException.class, () -> trainingService.create(t1));
+        assertThrows(ValidationException.class, () -> trainingService.create(t2));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTraineeOrItsIdIsNull() {
+        Training t1 = createTraining(null, "Yoga");
+        t1.setTrainee(null);
+
+        Training t2 = createTraining(null, "Yoga");
+        t2.getTrainee().setId(null);
+
+        assertThrows(EntityNotFoundException.class, () -> trainingService.create(t1));
+        assertThrows(EntityNotFoundException.class, () -> trainingService.create(t2));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTrainerOrItsIdIsNull() {
+        Training t1 = createTraining(null, "Yoga");
+        t1.setTrainer(null);
+
+        Training t2 = createTraining(null, "Yoga");
+        t2.getTrainer().setId(null);
+
+        when(traineeService.selectById(1L)).thenReturn(Optional.of(new Trainee()));
+
+        assertThrows(EntityNotFoundException.class, () -> trainingService.create(t1));
+        assertThrows(EntityNotFoundException.class, () -> trainingService.create(t2));
+    }
+
     private Training createTraining(Long id, String trainingName) {
         Trainee trainee = new Trainee();
         trainee.setId(1L);

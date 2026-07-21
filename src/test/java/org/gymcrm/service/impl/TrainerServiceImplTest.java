@@ -240,6 +240,111 @@ class TrainerServiceImplTest {
         verify(trainerDao).update(trainer);
     }
 
+    @Test
+    void shouldReturnEmptyListWhenUsernamesNullOrEmpty() {
+        assertTrue(trainerService.selectByUsernames(null).isEmpty());
+        assertTrue(trainerService.selectByUsernames(List.of()).isEmpty());
+        verifyNoInteractions(trainerDao);
+    }
+
+    @Test
+    void shouldSelectTrainersByListOfUsernames() {
+        List<String> usernames = List.of("user1", "user2");
+        when(trainerDao.findByUsernames(usernames)).thenReturn(List.of(new Trainer()));
+
+        List<Trainer> result = trainerService.selectByUsernames(usernames);
+
+        assertFalse(result.isEmpty());
+        verify(trainerDao).findByUsernames(usernames);
+    }
+
+    @Test
+    void shouldReturnFalseWhenAuthenticationParamsNull() {
+        assertFalse(trainerService.authenticate(null, "password"));
+        assertFalse(trainerService.authenticate("username", null));
+        assertFalse(trainerService.authenticate(null, null));
+    }
+
+    @Test
+    void shouldReturnFalseWhenTrainerNotFoundForAuthentication() {
+        when(trainerDao.findByUsername("unknown")).thenReturn(Optional.empty());
+        assertFalse(trainerService.authenticate("unknown", "password"));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenNewPasswordIsEmpty() {
+        assertThrows(ValidationException.class, () ->
+                trainerService.changePassword("user", "old", "  "));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTrainerNotFoundOnChangePassword() {
+        when(trainerDao.findByUsername("unknown")).thenReturn(Optional.empty());
+        assertThrows(EntityNotFoundException.class, () ->
+                trainerService.changePassword("unknown", "old", "new"));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenOldPasswordIsInvalid() {
+        Trainer trainer = createTrainer(1L, "A", "B", "user"); // пароль дефолтний: password123
+        when(trainerDao.findByUsername("user")).thenReturn(Optional.of(trainer));
+
+        assertThrows(ValidationException.class, () ->
+                trainerService.changePassword("user", "wrong_old", "newPass"));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTrainerNotFoundOnActivateOrDeactivate() {
+        when(trainerDao.findByUsername("unknown")).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class, () -> trainerService.activate("unknown"));
+        assertThrows(EntityNotFoundException.class, () -> trainerService.deactivate("unknown"));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTrainerAlreadyInactiveOnDeactivate() {
+        Trainer trainer = createTrainer(1L, "A", "B", "user");
+        trainer.getUser().setActive(false); // вже неактивний
+        when(trainerDao.findByUsername("user")).thenReturn(Optional.of(trainer));
+
+        assertThrows(ValidationException.class, () -> trainerService.deactivate("user"));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenUpdatingTrainerWithNullId() {
+        Trainer trainer = createTrainer(null, "John", "Doe", "john.doe"); // ID null для update
+        assertThrows(ValidationException.class, () -> trainerService.update(trainer));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenFirstNameOrLastNameMissing() {
+        Trainer t1 = createTrainer(1L, "  ", "Doe", "user");
+        Trainer t2 = createTrainer(1L, "John", null, "user");
+
+        assertThrows(ValidationException.class, () -> trainerService.create(t1));
+        assertThrows(ValidationException.class, () -> trainerService.create(t2));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenSpecializationIsNull() {
+        Trainer trainer = createTrainer(1L, "John", "Doe", "user");
+        trainer.setSpecialization(null);
+
+        assertThrows(ValidationException.class, () -> trainerService.create(trainer));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenUsernameMissingOnUpdate() {
+        Trainer trainer = createTrainer(1L, "John", "Doe", "  ");
+        assertThrows(ValidationException.class, () -> trainerService.update(trainer));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenUsernameOrTraineeUsernameNullOrBlank() {
+        assertThrows(ValidationException.class, () -> trainerService.selectByUsername(null));
+        assertThrows(ValidationException.class, () -> trainerService.getUnassignedTrainers(null));
+    }
+
     private Trainer createTrainer(Long id, String firstName, String lastName, String username) {
         User user = new User(id, firstName, lastName, username, "password123", true);
         Trainer trainer = new Trainer();
