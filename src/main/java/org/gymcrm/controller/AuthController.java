@@ -1,10 +1,10 @@
 package org.gymcrm.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.gymcrm.dto.request.ChangeLoginRequest;
+import org.gymcrm.dto.request.LoginRequest;
 import org.gymcrm.exception.AuthenticationException;
 import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.service.TraineeService;
@@ -24,12 +24,11 @@ public class AuthController {
         this.trainerService = trainerService;
     }
 
-    @GetMapping("/login")
+    @PostMapping("/login")
     @Operation(summary = "Verify username/password match", description = "Public endpoint; used to check credentials before subsequent authenticated calls")
-    public void login(@Parameter(required = true) @RequestParam(name = "username") String username,
-                      @Parameter(required = true) @RequestParam(name = "password") String password) {
-        boolean valid = traineeService.authenticate(username, password)
-                || trainerService.authenticate(username, password);
+    public void login(@Valid @RequestBody LoginRequest request) {
+        boolean valid = traineeService.authenticate(request.username(), request.password())
+                || trainerService.authenticate(request.username(), request.password());
         if (!valid) {
             throw new AuthenticationException("Invalid username or password");
         }

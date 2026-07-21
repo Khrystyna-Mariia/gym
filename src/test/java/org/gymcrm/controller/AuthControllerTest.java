@@ -18,7 +18,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.Optional;
 
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -47,9 +47,13 @@ class AuthControllerTest {
     void login_returnsOkWhenTraineeCredentialsValid() throws Exception {
         when(traineeService.authenticate("john.doe", "pass123")).thenReturn(true);
 
-        mockMvc.perform(get("/api/v1/auth/login")
-                        .param("username", "john.doe")
-                        .param("password", "pass123"))
+        String body = """
+                {"username":"john.doe","password":"pass123"}
+                """;
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
                 .andExpect(status().isOk());
 
         verify(trainerService, never()).authenticate(any(), any());
@@ -60,9 +64,13 @@ class AuthControllerTest {
         when(traineeService.authenticate("mike.smith", "pass123")).thenReturn(false);
         when(trainerService.authenticate("mike.smith", "pass123")).thenReturn(true);
 
-        mockMvc.perform(get("/api/v1/auth/login")
-                        .param("username", "mike.smith")
-                        .param("password", "pass123"))
+        String body = """
+                {"username":"mike.smith","password":"pass123"}
+                """;
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
                 .andExpect(status().isOk());
     }
 
@@ -71,9 +79,13 @@ class AuthControllerTest {
         when(traineeService.authenticate("john.doe", "wrong")).thenReturn(false);
         when(trainerService.authenticate("john.doe", "wrong")).thenReturn(false);
 
-        mockMvc.perform(get("/api/v1/auth/login")
-                        .param("username", "john.doe")
-                        .param("password", "wrong"))
+        String body = """
+                {"username":"john.doe","password":"wrong"}
+                """;
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
                 .andExpect(status().isUnauthorized());
     }
 
