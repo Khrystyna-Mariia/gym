@@ -1,4 +1,4 @@
-package org.gymcrm.config;
+package org.gymcrm;
 
 import org.gymcrm.dao.TraineeDao;
 import org.gymcrm.dao.TrainerDao;
@@ -9,13 +9,13 @@ import org.gymcrm.service.TrainerService;
 import org.gymcrm.service.TrainingService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
-import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@SpringJUnitConfig(AppConfig.class)
-class AppConfigTest {
+@SpringBootTest
+class GymCrmApplicationTest {
 
     @Autowired
     private ApplicationContext context;
@@ -38,12 +38,12 @@ class AppConfigTest {
     @Autowired
     private TrainingService trainingService;
 
-    @Autowired
+    @Autowired(required = false)
     private InitialDataParser initialDataParser;
 
     @Test
-    void shouldStartSpringContextSuccessfully() {
-        assertNotNull(context);
+    void contextLoads() {
+        assertNotNull(context, "Application context should not be null");
     }
 
     @Test

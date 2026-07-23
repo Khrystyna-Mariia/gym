@@ -8,8 +8,8 @@ import org.gymcrm.dto.request.*;
 import org.gymcrm.dto.response.*;
 import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.exception.ValidationException;
+import org.gymcrm.mapper.ShortInfoMapper;
 import org.gymcrm.mapper.TraineeMapper;
-import org.gymcrm.mapper.TrainerMapper;
 import org.gymcrm.mapper.TrainingMapper;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.service.TraineeService;
@@ -30,17 +30,20 @@ public class TraineeController {
     private final TrainerService trainerService;
     private final TrainingService trainingService;
     private final TraineeMapper traineeMapper;
-    private final TrainerMapper trainerMapper;
+    private final ShortInfoMapper shortInfoMapper;
     private final TrainingMapper trainingMapper;
 
-    public TraineeController(TraineeService traineeService, TrainerService trainerService,
-                             TrainingService trainingService, TraineeMapper traineeMapper,
-                             TrainerMapper trainerMapper, TrainingMapper trainingMapper) {
+    public TraineeController(TraineeService traineeService,
+                             TrainerService trainerService,
+                             TrainingService trainingService,
+                             TraineeMapper traineeMapper,
+                             ShortInfoMapper shortInfoMapper,
+                             TrainingMapper trainingMapper) {
         this.traineeService = traineeService;
         this.trainerService = trainerService;
         this.trainingService = trainingService;
         this.traineeMapper = traineeMapper;
-        this.trainerMapper = trainerMapper;
+        this.shortInfoMapper = shortInfoMapper;
         this.trainingMapper = trainingMapper;
     }
 
@@ -49,8 +52,6 @@ public class TraineeController {
     @Operation(summary = "Register a new trainee", description = "Public endpoint, no authentication required")
     public RegistrationResponse register(@Valid @RequestBody TraineeRegistrationRequest request) {
         Trainee trainee = traineeMapper.toEntity(request);
-        trainee.setDateOfBirth(request.dateOfBirth());
-        trainee.setAddress(request.address());
         Trainee created = traineeService.create(trainee);
         return traineeMapper.toRegistrationResponse(created);
     }
@@ -87,7 +88,7 @@ public class TraineeController {
     @GetMapping("/{username}/unassigned-trainers")
     @Operation(summary = "Get active trainers not yet assigned to this trainee")
     public List<TrainerShortInfo> getUnassignedTrainers(@PathVariable("username") String username) {
-        return trainerMapper.toShortInfoList(trainerService.getUnassignedTrainers(username));
+        return shortInfoMapper.toTrainerShortInfoList(trainerService.getUnassignedTrainers(username));
     }
 
     @PutMapping("/{username}/trainers")
@@ -99,7 +100,7 @@ public class TraineeController {
         Trainee updated = traineeService.selectByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Trainee with username " + username + " not found"));
-        return trainerMapper.toShortInfoList(List.copyOf(updated.getTrainers()));
+        return shortInfoMapper.toTrainerShortInfoList(List.copyOf(updated.getTrainers()));
     }
 
     @GetMapping("/{username}/trainings")
