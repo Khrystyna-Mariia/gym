@@ -1,5 +1,6 @@
 package org.gymcrm.service.impl;
 
+import org.gymcrm.actuator.GymMetrics;
 import org.gymcrm.annotation.RequireAuth;
 import org.gymcrm.dao.TrainerDao;
 import org.gymcrm.exception.EntityNotFoundException;
@@ -25,17 +26,24 @@ public class TrainerServiceImpl implements TrainerService {
 
     private final TrainerDao trainerDao;
     private final UserProfileInitializer userProfileInitializer;
+    private final GymMetrics gymMetrics;
 
-    public TrainerServiceImpl(TrainerDao trainerDao, UserProfileInitializer userProfileInitializer) {
+    public TrainerServiceImpl(TrainerDao trainerDao,
+                              UserProfileInitializer userProfileInitializer,
+                              GymMetrics gymMetrics) {
         this.trainerDao = trainerDao;
         this.userProfileInitializer = userProfileInitializer;
+        this.gymMetrics = gymMetrics;
     }
 
     @Override
     public Trainer create(Trainer trainer) {
         validateTrainer(trainer, false);
         userProfileInitializer.initialize(trainer.getUser());
-        return trainerDao.save(trainer);
+        Trainer savedTrainer = trainerDao.save(trainer);
+
+        gymMetrics.incrementTrainerRegistrations();
+        return savedTrainer;
     }
 
     @Override
@@ -96,13 +104,22 @@ public class TrainerServiceImpl implements TrainerService {
     @Transactional(readOnly = true)
     public boolean authenticate(String username, String password) {
         if (username == null || password == null) {
+            gymMetrics.incrementLoginFailure();
             return false;
         }
 
-        return trainerDao.findByUsername(username)
+        boolean authenticated = trainerDao.findByUsername(username)
                 .map(Trainer::getUser)
                 .map(user -> user.getPassword().equals(password))
                 .orElse(false);
+
+        if (authenticated) {
+            gymMetrics.incrementLoginSuccess();
+        } else {
+            gymMetrics.incrementLoginFailure();
+        }
+
+        return authenticated;
     }
 
     @Override

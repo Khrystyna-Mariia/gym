@@ -1,5 +1,6 @@
 package org.gymcrm.service.impl;
 
+import org.gymcrm.actuator.GymMetrics;
 import org.gymcrm.annotation.RequireAuth;
 import org.gymcrm.dao.TraineeDao;
 import org.gymcrm.exception.EntityNotFoundException;
@@ -30,18 +31,26 @@ public class TraineeServiceImpl implements TraineeService {
     private final TraineeDao traineeDao;
     private final UserProfileInitializer userProfileInitializer;
     private final TrainerService trainerService;
+    private final GymMetrics gymMetrics;
 
-    public TraineeServiceImpl(TraineeDao traineeDao, UserProfileInitializer userProfileInitializer, TrainerService trainerService) {
+    public TraineeServiceImpl(TraineeDao traineeDao,
+                              UserProfileInitializer userProfileInitializer,
+                              TrainerService trainerService,
+                              GymMetrics gymMetrics) {
         this.traineeDao = traineeDao;
         this.userProfileInitializer = userProfileInitializer;
         this.trainerService = trainerService;
+        this.gymMetrics = gymMetrics;
     }
 
     @Override
     public Trainee create(Trainee trainee) {
         validateTrainee(trainee, false);
         userProfileInitializer.initialize(trainee.getUser());
-        return traineeDao.save(trainee);
+        Trainee savedTrainee = traineeDao.save(trainee);
+
+        gymMetrics.incrementTraineeRegistrations();
+        return savedTrainee;
     }
 
     @Override
@@ -92,13 +101,22 @@ public class TraineeServiceImpl implements TraineeService {
     @Transactional(readOnly = true)
     public boolean authenticate(String username, String password) {
         if (username == null || password == null) {
+            gymMetrics.incrementLoginFailure();
             return false;
         }
 
-        return traineeDao.findByUsername(username)
+        boolean authenticated = traineeDao.findByUsername(username)
                 .map(Trainee::getUser)
                 .map(user -> user.getPassword().equals(password))
                 .orElse(false);
+
+        if (authenticated) {
+            gymMetrics.incrementLoginSuccess();
+        } else {
+            gymMetrics.incrementLoginFailure();
+        }
+
+        return authenticated;
     }
 
     @Override
