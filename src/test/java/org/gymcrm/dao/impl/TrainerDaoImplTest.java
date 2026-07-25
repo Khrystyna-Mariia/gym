@@ -105,6 +105,11 @@ class TrainerDaoImplTest {
                 .setParameter("name", TrainingTypeEnum.FITNESS)
                 .uniqueResult();
 
+        if (type == null) {
+            type = new TrainingType(null, TrainingTypeEnum.FITNESS);
+            session.persist(type);
+        }
+
         Trainer assignedTrainer = createTrainer(null, "assigned.coach");
         assignedTrainer.setSpecialization(type);
         session.persist(assignedTrainer);

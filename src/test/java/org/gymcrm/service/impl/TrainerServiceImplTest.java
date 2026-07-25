@@ -1,5 +1,6 @@
 package org.gymcrm.service.impl;
 
+import org.gymcrm.actuator.GymMetrics;
 import org.gymcrm.dao.TrainerDao;
 import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.exception.ValidationException;
@@ -30,9 +31,12 @@ class TrainerServiceImplTest {
     @Mock
     private UserProfileInitializer userProfileInitializer;
 
+    @Mock
+    private GymMetrics gymMetrics;
+
     @BeforeEach
     void setUp() {
-        trainerService = new TrainerServiceImpl(trainerDao, userProfileInitializer);
+        trainerService = new TrainerServiceImpl(trainerDao, userProfileInitializer, gymMetrics);
     }
 
     @Test
@@ -64,14 +68,14 @@ class TrainerServiceImplTest {
 
         verify(userProfileInitializer).initialize(newTrainer.getUser());
         verify(trainerDao).save(newTrainer);
+        verify(gymMetrics).incrementTrainerRegistrations();
     }
 
     @Test
     void shouldThrowExceptionWhenCreatingNullTrainer() {
         assertThrows(ValidationException.class, () -> trainerService.create(null));
 
-        verifyNoInteractions(userProfileInitializer);
-        verifyNoInteractions(trainerDao);
+        verifyNoInteractions(userProfileInitializer, trainerDao, gymMetrics);
     }
 
     @Test
@@ -80,7 +84,7 @@ class TrainerServiceImplTest {
         trainerWithNoUser.setUser(null);
 
         assertThrows(ValidationException.class, () -> trainerService.create(trainerWithNoUser));
-        verifyNoInteractions(userProfileInitializer, trainerDao);
+        verifyNoInteractions(userProfileInitializer, trainerDao, gymMetrics);
     }
 
     @Test
@@ -184,6 +188,7 @@ class TrainerServiceImplTest {
         boolean result = trainerService.authenticate("alex.brown", "password123");
 
         assertTrue(result);
+        verify(gymMetrics).incrementLoginSuccess();
     }
 
     @Test
@@ -194,6 +199,7 @@ class TrainerServiceImplTest {
         boolean result = trainerService.authenticate("alex.brown", "wrong_password");
 
         assertFalse(result);
+        verify(gymMetrics).incrementLoginFailure();
     }
 
     @Test
@@ -261,14 +267,20 @@ class TrainerServiceImplTest {
     @Test
     void shouldReturnFalseWhenAuthenticationParamsNull() {
         assertFalse(trainerService.authenticate(null, "password"));
+        verify(gymMetrics).incrementLoginFailure();
+
         assertFalse(trainerService.authenticate("username", null));
+        verify(gymMetrics, times(2)).incrementLoginFailure();
+
         assertFalse(trainerService.authenticate(null, null));
+        verify(gymMetrics, times(3)).incrementLoginFailure();
     }
 
     @Test
     void shouldReturnFalseWhenTrainerNotFoundForAuthentication() {
         when(trainerDao.findByUsername("unknown")).thenReturn(Optional.empty());
         assertFalse(trainerService.authenticate("unknown", "password"));
+        verify(gymMetrics).incrementLoginFailure();
     }
 
     @Test
@@ -286,7 +298,7 @@ class TrainerServiceImplTest {
 
     @Test
     void shouldThrowExceptionWhenOldPasswordIsInvalid() {
-        Trainer trainer = createTrainer(1L, "A", "B", "user"); // пароль дефолтний: password123
+        Trainer trainer = createTrainer(1L, "A", "B", "user");
         when(trainerDao.findByUsername("user")).thenReturn(Optional.of(trainer));
 
         assertThrows(ValidationException.class, () ->
@@ -304,7 +316,7 @@ class TrainerServiceImplTest {
     @Test
     void shouldThrowExceptionWhenTrainerAlreadyInactiveOnDeactivate() {
         Trainer trainer = createTrainer(1L, "A", "B", "user");
-        trainer.getUser().setActive(false); // вже неактивний
+        trainer.getUser().setActive(false);
         when(trainerDao.findByUsername("user")).thenReturn(Optional.of(trainer));
 
         assertThrows(ValidationException.class, () -> trainerService.deactivate("user"));
@@ -312,7 +324,7 @@ class TrainerServiceImplTest {
 
     @Test
     void shouldThrowExceptionWhenUpdatingTrainerWithNullId() {
-        Trainer trainer = createTrainer(null, "John", "Doe", "john.doe"); // ID null для update
+        Trainer trainer = createTrainer(null, "John", "Doe", "john.doe");
         assertThrows(ValidationException.class, () -> trainerService.update(trainer));
     }
 
