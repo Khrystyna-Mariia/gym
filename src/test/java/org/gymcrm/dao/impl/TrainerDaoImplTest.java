@@ -1,13 +1,12 @@
 package org.gymcrm.dao.impl;
 
-import org.gymcrm.config.AppConfig;
 import org.gymcrm.dao.TrainerDao;
 import org.gymcrm.model.*;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -18,7 +17,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringJUnitConfig(AppConfig.class)
+@SpringBootTest
 @Transactional
 class TrainerDaoImplTest {
 
@@ -106,6 +105,11 @@ class TrainerDaoImplTest {
                 .setParameter("name", TrainingTypeEnum.FITNESS)
                 .uniqueResult();
 
+        if (type == null) {
+            type = new TrainingType(null, TrainingTypeEnum.FITNESS);
+            session.persist(type);
+        }
+
         Trainer assignedTrainer = createTrainer(null, "assigned.coach");
         assignedTrainer.setSpecialization(type);
         session.persist(assignedTrainer);
@@ -150,7 +154,6 @@ class TrainerDaoImplTest {
 
     @Test
     void shouldReturnFalseWhenTrainerUsernameDoesNotExist() {
-        // Перевіряємо протилежну гілку для existsByUsername
         boolean exists = trainerDao.existsByUsername("non.existent.trainer");
         assertFalse(exists);
     }

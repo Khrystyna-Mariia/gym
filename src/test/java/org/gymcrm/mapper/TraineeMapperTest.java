@@ -4,7 +4,6 @@ import org.gymcrm.dto.request.TraineeRegistrationRequest;
 import org.gymcrm.dto.request.UpdateTraineeProfileRequest;
 import org.gymcrm.dto.response.RegistrationResponse;
 import org.gymcrm.dto.response.TraineeProfileResponse;
-import org.gymcrm.dto.response.TraineeShortInfo;
 import org.gymcrm.dto.response.UpdateTraineeProfileResponse;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.model.User;
@@ -20,7 +19,7 @@ class TraineeMapperTest {
     private final TraineeMapper mapper = Mappers.getMapper(TraineeMapper.class);
 
     @Test
-    void toEntity_mapsFlatRequestFieldsIntoNestedUser() {
+    void toEntity_mapsFlatRequestFieldsIntoNestedUserAndEntity() {
         TraineeRegistrationRequest request = new TraineeRegistrationRequest(
                 "John", "Doe", LocalDate.of(2000, 5, 14), "Main St 1");
 
@@ -29,6 +28,8 @@ class TraineeMapperTest {
         assertNotNull(result.getUser());
         assertEquals("John", result.getUser().getFirstName());
         assertEquals("Doe", result.getUser().getLastName());
+        assertEquals(LocalDate.of(2000, 5, 14), result.getDateOfBirth());
+        assertEquals("Main St 1", result.getAddress());
         assertNull(result.getId());
         assertTrue(result.getTrainers().isEmpty());
         assertTrue(result.getTrainings().isEmpty());
@@ -68,22 +69,6 @@ class TraineeMapperTest {
 
         assertEquals("john.doe", response.username());
         assertEquals("genPass123", response.password());
-    }
-
-    @Test
-    void toShortInfo_mapsUserFieldsFlattened() {
-        Trainee trainee = new Trainee();
-        User user = new User();
-        user.setUsername("john.doe");
-        user.setFirstName("John");
-        user.setLastName("Doe");
-        trainee.setUser(user);
-
-        TraineeShortInfo shortInfo = mapper.toShortInfo(trainee);
-
-        assertEquals("john.doe", shortInfo.username());
-        assertEquals("John", shortInfo.firstName());
-        assertEquals("Doe", shortInfo.lastName());
     }
 
     @Test
@@ -134,15 +119,5 @@ class TraineeMapperTest {
         assertNull(response.firstName());
         assertNull(response.lastName());
         assertFalse(response.isActive());
-    }
-
-    @Test
-    void toShortInfo_handlesNullUserGracefully() {
-        Trainee trainee = new Trainee();
-
-        TraineeShortInfo shortInfo = mapper.toShortInfo(trainee);
-
-        assertNull(shortInfo.username());
-        assertNull(shortInfo.firstName());
     }
 }

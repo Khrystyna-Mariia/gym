@@ -7,8 +7,8 @@ import org.gymcrm.dto.request.*;
 import org.gymcrm.dto.response.*;
 import org.gymcrm.exception.GlobalExceptionHandler;
 import org.gymcrm.filter.AuthenticationContextFilter;
+import org.gymcrm.mapper.ShortInfoMapper;
 import org.gymcrm.mapper.TraineeMapper;
-import org.gymcrm.mapper.TrainerMapper;
 import org.gymcrm.mapper.TrainingMapper;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.model.Trainer;
@@ -61,7 +61,7 @@ class TraineeControllerTest {
         @Bean public TrainerService trainerService() { return mock(TrainerServiceImpl.class); }
         @Bean public TrainingService trainingService() { return mock(TrainingService.class); }
         @Bean public TraineeMapper traineeMapper() { return mock(TraineeMapper.class); }
-        @Bean public TrainerMapper trainerMapper() { return mock(TrainerMapper.class); }
+        @Bean public ShortInfoMapper shortInfoMapper() { return mock(ShortInfoMapper.class); }
         @Bean public TrainingMapper trainingMapper() { return mock(TrainingMapper.class); }
 
         @Bean
@@ -72,9 +72,9 @@ class TraineeControllerTest {
         @Bean
         public TraineeController traineeController(TraineeService traineeService, TrainerService trainerService,
                                                    TrainingService trainingService, TraineeMapper traineeMapper,
-                                                   TrainerMapper trainerMapper, TrainingMapper trainingMapper) {
+                                                   ShortInfoMapper shortInfoMapper, TrainingMapper trainingMapper) {
             return new TraineeController(traineeService, trainerService, trainingService,
-                    traineeMapper, trainerMapper, trainingMapper);
+                    traineeMapper, shortInfoMapper, trainingMapper);
         }
 
         @Bean
@@ -89,14 +89,14 @@ class TraineeControllerTest {
     @Autowired private TrainerService trainerServiceProxy;
     @Autowired private TrainingService trainingServiceProxy;
     @Autowired private TraineeMapper traineeMapperProxy;
-    @Autowired private TrainerMapper trainerMapperProxy;
+    @Autowired private ShortInfoMapper shortInfoMapperProxy;
     @Autowired private TrainingMapper trainingMapperProxy;
 
     private TraineeService traineeService;
     private TrainerService trainerService;
     private TrainingService trainingService;
     private TraineeMapper traineeMapper;
-    private TrainerMapper trainerMapper;
+    private ShortInfoMapper shortInfoMapper;
     private TrainingMapper trainingMapper;
 
     private MockMvc mockMvc;
@@ -117,10 +117,10 @@ class TraineeControllerTest {
         trainerService = AopTestUtils.getTargetObject(trainerServiceProxy);
         trainingService = AopTestUtils.getTargetObject(trainingServiceProxy);
         traineeMapper = AopTestUtils.getTargetObject(traineeMapperProxy);
-        trainerMapper = AopTestUtils.getTargetObject(trainerMapperProxy);
+        shortInfoMapper = AopTestUtils.getTargetObject(shortInfoMapperProxy);
         trainingMapper = AopTestUtils.getTargetObject(trainingMapperProxy);
 
-        Mockito.reset(traineeService, trainerService, trainingService, traineeMapper, trainerMapper, trainingMapper);
+        Mockito.reset(traineeService, trainerService, trainingService, traineeMapper, shortInfoMapper, trainingMapper);
     }
 
     private void mockSuccessfulAuthentication() {
@@ -275,7 +275,7 @@ class TraineeControllerTest {
         List<TrainerShortInfo> response = List.of(new TrainerShortInfo("t1", "Anna", "K", "YOGA"));
 
         when(trainerService.getUnassignedTrainers("john.doe")).thenReturn(trainers);
-        when(trainerMapper.toShortInfoList(trainers)).thenReturn(response);
+        when(shortInfoMapper.toTrainerShortInfoList(trainers)).thenReturn(response);
 
         mockMvc.perform(get("/api/v1/trainees/john.doe/unassigned-trainers")
                         .header("Authorization", AUTH_HEADER_VALUE))
@@ -292,7 +292,7 @@ class TraineeControllerTest {
         List<TrainerShortInfo> response = List.of();
 
         when(traineeService.selectByUsername("john.doe")).thenReturn(Optional.of(updated));
-        when(trainerMapper.toShortInfoList(anyList())).thenReturn(response);
+        when(shortInfoMapper.toTrainerShortInfoList(anyList())).thenReturn(response);
 
         mockMvc.perform(put("/api/v1/trainees/john.doe/trainers")
                         .header("Authorization", AUTH_HEADER_VALUE)

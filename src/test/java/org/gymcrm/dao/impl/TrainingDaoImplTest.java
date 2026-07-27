@@ -1,13 +1,12 @@
 package org.gymcrm.dao.impl;
 
-import org.gymcrm.config.AppConfig;
 import org.gymcrm.dao.TrainingDao;
 import org.gymcrm.model.*;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -17,7 +16,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringJUnitConfig(AppConfig.class)
+@SpringBootTest
 @Transactional
 class TrainingDaoImplTest {
 
@@ -64,7 +63,6 @@ class TrainingDaoImplTest {
         Training matching = createAndPersistFullTraining(traineeUsername, "jack.trainer", "Fitness Class", targetDate);
 
         matching.getTrainer().getUser().setFirstName("Jack");
-
         matching.getTrainingType().setTrainingTypeName(TrainingTypeEnum.FITNESS);
 
         getCurrentSession().flush();

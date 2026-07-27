@@ -1,6 +1,5 @@
 package org.gymcrm.dao.impl;
 
-import org.gymcrm.config.AppConfig;
 import org.gymcrm.dao.TrainingTypeDao;
 import org.gymcrm.model.TrainingType;
 import org.gymcrm.model.TrainingTypeEnum;
@@ -8,7 +7,7 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -16,7 +15,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringJUnitConfig(AppConfig.class)
+@SpringBootTest
 @Transactional
 class TrainingTypeDaoImplTest {
 

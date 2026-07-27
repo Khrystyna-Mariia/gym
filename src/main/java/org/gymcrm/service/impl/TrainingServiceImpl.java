@@ -1,5 +1,6 @@
 package org.gymcrm.service.impl;
 
+import org.gymcrm.actuator.GymMetrics;
 import org.gymcrm.annotation.RequireAuth;
 import org.gymcrm.dao.TrainingDao;
 import org.gymcrm.exception.EntityNotFoundException;
@@ -25,18 +26,26 @@ public class TrainingServiceImpl implements TrainingService {
     private final TrainingDao trainingDao;
     private final TraineeService traineeService;
     private final TrainerService trainerService;
+    private final GymMetrics gymMetrics;
 
-    public TrainingServiceImpl(TrainingDao trainingDao, TraineeService traineeService, TrainerService trainerService) {
+    public TrainingServiceImpl(TrainingDao trainingDao,
+                               TraineeService traineeService,
+                               TrainerService trainerService,
+                               GymMetrics gymMetrics) {
         this.trainingDao = trainingDao;
         this.traineeService = traineeService;
         this.trainerService = trainerService;
+        this.gymMetrics = gymMetrics;
     }
 
     @Override
     @RequireAuth
     public Training create(Training training) {
         validateTraining(training);
-        return trainingDao.save(training);
+        Training savedTraining = trainingDao.save(training);
+
+        gymMetrics.incrementTrainingsCreated();
+        return savedTraining;
     }
 
     @Override

@@ -1,5 +1,6 @@
 package org.gymcrm.service.impl;
 
+import org.gymcrm.actuator.GymMetrics;
 import org.gymcrm.dao.TrainingDao;
 import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.exception.ValidationException;
@@ -32,9 +33,12 @@ class TrainingServiceImplTest {
     @Mock
     private TrainerService trainerService;
 
+    @Mock
+    private GymMetrics gymMetrics;
+
     @BeforeEach
     void setUp() {
-        trainingService = new TrainingServiceImpl(trainingDao, traineeService, trainerService);
+        trainingService = new TrainingServiceImpl(trainingDao, traineeService, trainerService, gymMetrics);
     }
 
     @Test
@@ -60,9 +64,7 @@ class TrainingServiceImplTest {
     void shouldThrowExceptionWhenCreatingNullTraining() {
         assertThrows(ValidationException.class, () -> trainingService.create(null));
 
-        verifyNoInteractions(trainingDao);
-        verifyNoInteractions(traineeService);
-        verifyNoInteractions(trainerService);
+        verifyNoInteractions(trainingDao, traineeService, trainerService, gymMetrics);
     }
 
     @Test
@@ -71,7 +73,7 @@ class TrainingServiceImplTest {
         training.setTrainingDuration(0);
 
         assertThrows(ValidationException.class, () -> trainingService.create(training));
-        verifyNoInteractions(trainingDao);
+        verifyNoInteractions(trainingDao, gymMetrics);
     }
 
     @Test
@@ -256,5 +258,4 @@ class TrainingServiceImplTest {
                 60
         );
     }
-
 }

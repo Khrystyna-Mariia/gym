@@ -1,5 +1,6 @@
 package org.gymcrm.service.impl;
 
+import org.gymcrm.actuator.GymMetrics;
 import org.gymcrm.dao.TraineeDao;
 import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.exception.ValidationException;
@@ -34,9 +35,12 @@ class TraineeServiceImplTest {
     @Mock
     private TrainerService trainerService;
 
+    @Mock
+    private GymMetrics gymMetrics;
+
     @BeforeEach
     void setUp() {
-        traineeService = new TraineeServiceImpl(traineeDao, userProfileInitializer, trainerService);
+        traineeService = new TraineeServiceImpl(traineeDao, userProfileInitializer, trainerService, gymMetrics);
     }
 
     @Test
@@ -69,13 +73,14 @@ class TraineeServiceImplTest {
 
         verify(userProfileInitializer).initialize(newTrainee.getUser());
         verify(traineeDao).save(newTrainee);
+        verify(gymMetrics).incrementTraineeRegistrations();
     }
 
     @Test
     void shouldThrowExceptionWhenCreatingNullTrainee() {
         assertThrows(ValidationException.class, () -> traineeService.create(null));
 
-        verifyNoInteractions(userProfileInitializer, traineeDao);
+        verifyNoInteractions(userProfileInitializer, traineeDao, gymMetrics);
     }
 
     @Test
@@ -84,7 +89,7 @@ class TraineeServiceImplTest {
         traineeWithNoUser.setUser(null);
 
         assertThrows(ValidationException.class, () -> traineeService.create(traineeWithNoUser));
-        verifyNoInteractions(userProfileInitializer, traineeDao);
+        verifyNoInteractions(userProfileInitializer, traineeDao, gymMetrics);
     }
 
     @Test
@@ -181,6 +186,7 @@ class TraineeServiceImplTest {
         boolean authenticated = traineeService.authenticate("john.smith", "password123");
 
         assertTrue(authenticated);
+        verify(gymMetrics).incrementLoginSuccess();
     }
 
     @Test
@@ -191,6 +197,7 @@ class TraineeServiceImplTest {
         boolean authenticated = traineeService.authenticate("john.smith", "wrong_pass");
 
         assertFalse(authenticated);
+        verify(gymMetrics).incrementLoginFailure();
     }
 
     @Test
@@ -276,13 +283,18 @@ class TraineeServiceImplTest {
     @Test
     void authenticate_shouldReturnFalseWhenArgsNull() {
         assertFalse(traineeService.authenticate(null, "password"));
+        verify(gymMetrics).incrementLoginFailure();
+
         assertFalse(traineeService.authenticate("username", null));
+        verify(gymMetrics, times(2)).incrementLoginFailure();
     }
 
     @Test
     void authenticate_shouldReturnFalseWhenTraineeNotFound() {
         when(traineeDao.findByUsername("ghost")).thenReturn(Optional.empty());
+
         assertFalse(traineeService.authenticate("ghost", "password"));
+        verify(gymMetrics).incrementLoginFailure();
     }
 
     @Test
