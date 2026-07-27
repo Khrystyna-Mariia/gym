@@ -2,8 +2,6 @@ package org.gymcrm.actuator;
 
 import org.gymcrm.dao.TraineeDao;
 import org.gymcrm.dao.TrainerDao;
-import org.gymcrm.model.Trainee;
-import org.gymcrm.model.Trainer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,11 +12,10 @@ import org.springframework.boot.actuate.health.Status;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class GymDataHealthIndicatorTest {
@@ -38,20 +35,20 @@ class GymDataHealthIndicatorTest {
 
     @Test
     void health_returnsUpWhenTraineesExist() {
-        when(traineeDao.findAll()).thenReturn(List.of(new Trainee()));
-        when(trainerDao.findAll()).thenReturn(List.of());
+        when(traineeDao.count()).thenReturn(1L);
+        when(trainerDao.count()).thenReturn(0L);
 
         Health health = indicator.health();
 
         assertEquals(Status.UP, health.getStatus());
-        assertEquals(1, health.getDetails().get("traineeCount"));
-        assertEquals(0, health.getDetails().get("trainerCount"));
+        assertEquals(1L, health.getDetails().get("traineeCount"));
+        assertEquals(0L, health.getDetails().get("trainerCount"));
     }
 
     @Test
     void health_returnsUpWhenTrainersExist() {
-        when(traineeDao.findAll()).thenReturn(List.of());
-        when(trainerDao.findAll()).thenReturn(List.of(new Trainer()));
+        when(traineeDao.count()).thenReturn(0L);
+        when(trainerDao.count()).thenReturn(1L);
 
         Health health = indicator.health();
 
@@ -60,8 +57,8 @@ class GymDataHealthIndicatorTest {
 
     @Test
     void health_returnsDownWhenNoDataExists() {
-        when(traineeDao.findAll()).thenReturn(List.of());
-        when(trainerDao.findAll()).thenReturn(List.of());
+        when(traineeDao.count()).thenReturn(0L);
+        when(trainerDao.count()).thenReturn(0L);
 
         Health health = indicator.health();
 
@@ -70,7 +67,7 @@ class GymDataHealthIndicatorTest {
 
     @Test
     void health_returnsDownWithExceptionWhenDaoThrows() {
-        when(traineeDao.findAll()).thenThrow(new RuntimeException("DB connection lost"));
+        when(traineeDao.count()).thenThrow(new RuntimeException("DB connection lost"));
 
         Health health = indicator.health();
 

@@ -100,4 +100,13 @@ public class TrainerDaoImpl implements TrainerDao {
                 .setParameterList("usernames", lowerUsernames)
                 .getResultList();
     }
+
+    @Override
+    public long count() {
+        logger.debug("Counting total trainers in database");
+        Long count = getCurrentSession()
+                .createQuery("select count(t) from Trainer t", Long.class)
+                .uniqueResult();
+        return count != null ? count : 0L;
+    }
 }

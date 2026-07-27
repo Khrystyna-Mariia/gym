@@ -15,4 +15,6 @@ public interface TrainerDao extends CrudDao<Trainer, Long> {
     List<Trainer> findTrainersNotAssignedToTrainee(String traineeUsername);
 
     List<Trainer> findByUsernames(List<String> usernames);
+
+    long count();
 }

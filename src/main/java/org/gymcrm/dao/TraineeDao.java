@@ -12,4 +12,6 @@ public interface TraineeDao extends CrudDao<Trainee, Long> {
     boolean existsByUsername(String username);
 
     Optional<Trainee> findByUsername(String username);
+
+    long count();
 }

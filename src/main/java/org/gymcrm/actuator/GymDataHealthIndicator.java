@@ -28,8 +28,8 @@ public class GymDataHealthIndicator implements HealthIndicator {
     public Health health() {
         try {
             return transactionTemplate.execute(status -> {
-                int traineeCount = traineeDao.findAll().size();
-                int trainerCount = trainerDao.findAll().size();
+                long traineeCount = traineeDao.count();
+                long trainerCount = trainerDao.count();
 
                 Health.Builder builder = (traineeCount > 0 || trainerCount > 0) ? Health.up() : Health.down();
                 return builder

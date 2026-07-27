@@ -86,4 +86,13 @@ public class TraineeDaoImpl implements TraineeDao {
                 .setParameter("username", username)
                 .uniqueResultOptional();
     }
+
+    @Override
+    public long count() {
+        logger.debug("Counting total trainees in database");
+        Long count = getCurrentSession()
+                .createQuery("select count(t) from Trainee t", Long.class)
+                .uniqueResult();
+        return count != null ? count : 0L;
+    }
 }
