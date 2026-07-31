@@ -5,6 +5,7 @@ import org.gymcrm.annotation.RequireAuth;
 import org.gymcrm.dao.TraineeDao;
 import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.exception.ValidationException;
+import org.gymcrm.model.Role;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.User;
@@ -50,7 +51,7 @@ public class TraineeServiceImpl implements TraineeService {
     @Override
     public Trainee create(Trainee trainee) {
         validateTrainee(trainee, false);
-        userProfileInitializer.initialize(trainee.getUser());
+        userProfileInitializer.initialize(trainee.getUser(), Role.TRAINEE);
         Trainee savedTrainee = traineeDao.save(trainee);
 
         gymMetrics.incrementTraineeRegistrations();

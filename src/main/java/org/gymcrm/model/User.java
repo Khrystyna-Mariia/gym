@@ -33,6 +33,10 @@ public class User {
     @Column(name = "is_active", nullable = false)
     private boolean isActive;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false)
+    private Role role;
+
     @Override
     public String toString() {
         return "User{" +
@@ -41,6 +45,7 @@ public class User {
                 ", lastName='" + lastName + '\'' +
                 ", username='" + username + '\'' +
                 ", isActive=" + isActive +
+                ", role=" + role +
                 '}';
     }
 }

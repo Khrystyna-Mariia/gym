@@ -3,6 +3,7 @@ package org.gymcrm.service;
 import org.gymcrm.dao.TraineeDao;
 import org.gymcrm.dao.TrainerDao;
 import org.gymcrm.exception.ValidationException;
+import org.gymcrm.model.Role;
 import org.gymcrm.model.User;
 import org.gymcrm.util.PasswordGenerator;
 import org.gymcrm.util.UsernameGenerator;
@@ -31,9 +32,12 @@ public class UserProfileInitializer {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public String initialize(User user) {
+    public String initialize(User user, Role role) {
         if (user == null) {
             throw new ValidationException("User must not be null");
+        }
+        if (role == null) {
+            throw new ValidationException("User role must not be null");
         }
 
         String username = usernameGenerator.generate(
@@ -48,6 +52,7 @@ public class UserProfileInitializer {
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(rawPassword));
         user.setActive(true);
+        user.setRole(role);
 
         return rawPassword;
     }
