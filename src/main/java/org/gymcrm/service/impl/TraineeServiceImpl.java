@@ -13,6 +13,7 @@ import org.gymcrm.service.TrainerService;
 import org.gymcrm.service.UserProfileInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,15 +33,18 @@ public class TraineeServiceImpl implements TraineeService {
     private final UserProfileInitializer userProfileInitializer;
     private final TrainerService trainerService;
     private final GymMetrics gymMetrics;
+    private final PasswordEncoder passwordEncoder;
 
     public TraineeServiceImpl(TraineeDao traineeDao,
                               UserProfileInitializer userProfileInitializer,
                               TrainerService trainerService,
-                              GymMetrics gymMetrics) {
+                              GymMetrics gymMetrics,
+                              PasswordEncoder passwordEncoder) {
         this.traineeDao = traineeDao;
         this.userProfileInitializer = userProfileInitializer;
         this.trainerService = trainerService;
         this.gymMetrics = gymMetrics;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -107,7 +111,7 @@ public class TraineeServiceImpl implements TraineeService {
 
         boolean authenticated = traineeDao.findByUsername(username)
                 .map(Trainee::getUser)
-                .map(user -> user.getPassword().equals(password))
+                .map(user -> passwordEncoder.matches(password, user.getPassword()))
                 .orElse(false);
 
         if (authenticated) {
@@ -130,11 +134,11 @@ public class TraineeServiceImpl implements TraineeService {
                 .orElseThrow(() -> new EntityNotFoundException("Trainee with username " + username + " not found"));
 
         User user = trainee.getUser();
-        if (!user.getPassword().equals(oldPassword)) {
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
             throw new ValidationException("Invalid old password provided");
         }
 
-        user.setPassword(newPassword);
+        user.setPassword(passwordEncoder.encode(newPassword));
         traineeDao.update(trainee);
         logger.info("Password successfully changed for user: {}", username);
     }

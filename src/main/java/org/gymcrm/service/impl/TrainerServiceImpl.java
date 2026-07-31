@@ -11,6 +11,7 @@ import org.gymcrm.service.TrainerService;
 import org.gymcrm.service.UserProfileInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,13 +28,16 @@ public class TrainerServiceImpl implements TrainerService {
     private final TrainerDao trainerDao;
     private final UserProfileInitializer userProfileInitializer;
     private final GymMetrics gymMetrics;
+    private final PasswordEncoder passwordEncoder;
 
     public TrainerServiceImpl(TrainerDao trainerDao,
                               UserProfileInitializer userProfileInitializer,
-                              GymMetrics gymMetrics) {
+                              GymMetrics gymMetrics,
+                              PasswordEncoder passwordEncoder) {
         this.trainerDao = trainerDao;
         this.userProfileInitializer = userProfileInitializer;
         this.gymMetrics = gymMetrics;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -110,7 +114,7 @@ public class TrainerServiceImpl implements TrainerService {
 
         boolean authenticated = trainerDao.findByUsername(username)
                 .map(Trainer::getUser)
-                .map(user -> user.getPassword().equals(password))
+                .map(user -> passwordEncoder.matches(password, user.getPassword()))
                 .orElse(false);
 
         if (authenticated) {
@@ -133,11 +137,11 @@ public class TrainerServiceImpl implements TrainerService {
                 .orElseThrow(() -> new EntityNotFoundException("Trainer with username " + username + " not found"));
 
         User user = trainer.getUser();
-        if (!user.getPassword().equals(oldPassword)) {
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
             throw new ValidationException("Invalid old password provided");
         }
 
-        user.setPassword(newPassword);
+        user.setPassword(passwordEncoder.encode(newPassword));
         trainerDao.update(trainer);
         logger.info("Password successfully changed for trainer: {}", username);
     }
