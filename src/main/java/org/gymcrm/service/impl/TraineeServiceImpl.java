@@ -9,6 +9,7 @@ import org.gymcrm.model.Role;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.User;
+import org.gymcrm.service.RegistrationResult;
 import org.gymcrm.service.TraineeService;
 import org.gymcrm.service.TrainerService;
 import org.gymcrm.service.UserProfileInitializer;
@@ -49,13 +50,13 @@ public class TraineeServiceImpl implements TraineeService {
     }
 
     @Override
-    public Trainee create(Trainee trainee) {
+    public RegistrationResult<Trainee> create(Trainee trainee) {
         validateTrainee(trainee, false);
-        userProfileInitializer.initialize(trainee.getUser(), Role.TRAINEE);
+        String rawPassword = userProfileInitializer.initialize(trainee.getUser(), Role.TRAINEE);
         Trainee savedTrainee = traineeDao.save(trainee);
 
         gymMetrics.incrementTraineeRegistrations();
-        return savedTrainee;
+        return new RegistrationResult<>(savedTrainee, rawPassword);
     }
 
     @Override

@@ -28,10 +28,6 @@ public interface TraineeMapper {
     @Mapping(target = "trainings", ignore = true)
     void updateEntityFromRequest(UpdateTraineeProfileRequest request, @MappingTarget Trainee trainee);
 
-    @Mapping(target = "username", source = "user.username")
-    @Mapping(target = "password", source = "user.password")
-    RegistrationResponse toRegistrationResponse(Trainee trainee);
-
     @Mapping(target = "firstName", source = "user.firstName")
     @Mapping(target = "lastName", source = "user.lastName")
     @Mapping(target = "isActive", source = "user.active")

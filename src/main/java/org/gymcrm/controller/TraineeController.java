@@ -12,6 +12,7 @@ import org.gymcrm.mapper.ShortInfoMapper;
 import org.gymcrm.mapper.TraineeMapper;
 import org.gymcrm.mapper.TrainingMapper;
 import org.gymcrm.model.Trainee;
+import org.gymcrm.service.RegistrationResult;
 import org.gymcrm.service.TraineeService;
 import org.gymcrm.service.TrainerService;
 import org.gymcrm.service.TrainingService;
@@ -52,8 +53,8 @@ public class TraineeController {
     @Operation(summary = "Register a new trainee", description = "Public endpoint, no authentication required")
     public RegistrationResponse register(@Valid @RequestBody TraineeRegistrationRequest request) {
         Trainee trainee = traineeMapper.toEntity(request);
-        Trainee created = traineeService.create(trainee);
-        return traineeMapper.toRegistrationResponse(created);
+        RegistrationResult<Trainee> result = traineeService.create(trainee);
+        return new RegistrationResponse(result.entity().getUser().getUsername(), result.rawPassword());
     }
 
     @GetMapping("/{username}")

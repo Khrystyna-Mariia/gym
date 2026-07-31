@@ -28,10 +28,6 @@ public interface TrainerMapper {
     @Mapping(target = "trainees", ignore = true)
     void updateEntityFromRequest(UpdateTrainerProfileRequest request, @MappingTarget Trainer trainer);
 
-    @Mapping(target = "username", source = "user.username")
-    @Mapping(target = "password", source = "user.password")
-    RegistrationResponse toRegistrationResponse(Trainer trainer);
-
     @Mapping(target = "firstName", source = "user.firstName")
     @Mapping(target = "lastName", source = "user.lastName")
     @Mapping(target = "isActive", source = "user.active")

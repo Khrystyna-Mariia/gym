@@ -12,6 +12,7 @@ import org.gymcrm.mapper.TrainerMapper;
 import org.gymcrm.mapper.TrainingMapper;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.TrainingType;
+import org.gymcrm.service.RegistrationResult;
 import org.gymcrm.service.TrainerService;
 import org.gymcrm.service.TrainingService;
 import org.gymcrm.service.TrainingTypeService;
@@ -51,8 +52,8 @@ public class TrainerController {
                         "Training type with id " + request.specializationId() + " does not exist"));
         Trainer trainer = trainerMapper.toEntity(request);
         trainer.setSpecialization(specialization);
-        Trainer created = trainerService.create(trainer);
-        return trainerMapper.toRegistrationResponse(created);
+        RegistrationResult<Trainer> result = trainerService.create(trainer);
+        return new RegistrationResponse(result.entity().getUser().getUsername(), result.rawPassword());
     }
 
     @GetMapping("/{username}")

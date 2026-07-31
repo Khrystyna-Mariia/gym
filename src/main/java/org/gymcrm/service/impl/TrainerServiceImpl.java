@@ -8,6 +8,7 @@ import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.Role;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.User;
+import org.gymcrm.service.RegistrationResult;
 import org.gymcrm.service.TrainerService;
 import org.gymcrm.service.UserProfileInitializer;
 import org.slf4j.Logger;
@@ -42,13 +43,13 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
     @Override
-    public Trainer create(Trainer trainer) {
+    public RegistrationResult<Trainer> create(Trainer trainer) {
         validateTrainer(trainer, false);
-        userProfileInitializer.initialize(trainer.getUser(), Role.TRAINER);
+        String rawPassword = userProfileInitializer.initialize(trainer.getUser(), Role.TRAINER);
         Trainer savedTrainer = trainerDao.save(trainer);
 
         gymMetrics.incrementTrainerRegistrations();
-        return savedTrainer;
+        return new RegistrationResult<>(savedTrainer, rawPassword);
     }
 
     @Override
