@@ -1,6 +1,5 @@
 package org.gymcrm.service.impl;
 
-import org.gymcrm.annotation.RequireAuth;
 import org.gymcrm.dao.TrainingTypeDao;
 import org.gymcrm.model.TrainingType;
 import org.gymcrm.service.TrainingTypeService;
@@ -21,7 +20,6 @@ public class TrainingTypeServiceImpl implements TrainingTypeService {
     }
 
     @Override
-    @RequireAuth
     public List<TrainingType> selectAll() {
         return trainingTypeDao.findAll();
     }

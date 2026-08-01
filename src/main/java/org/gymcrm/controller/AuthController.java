@@ -8,7 +8,6 @@ import org.gymcrm.dto.request.ChangeLoginRequest;
 import org.gymcrm.dto.request.LoginRequest;
 import org.gymcrm.dto.response.LoginResponse;
 import org.gymcrm.exception.AuthenticationException;
-import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.model.Role;
 import org.gymcrm.security.JwtService;
 import org.gymcrm.security.UserPrincipal;

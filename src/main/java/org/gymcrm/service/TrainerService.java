@@ -20,8 +20,6 @@ public interface TrainerService {
 
     List<Trainer> selectByUsernames(List<String> usernames);
 
-    boolean authenticate(String username, String password);
-
     void changePassword(String username, String oldPassword, String newPassword);
 
     void activate(String username);

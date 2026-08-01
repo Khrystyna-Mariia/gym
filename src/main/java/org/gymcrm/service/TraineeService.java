@@ -18,8 +18,6 @@ public interface TraineeService {
 
     Optional<Trainee> selectByUsername(String username);
 
-    boolean authenticate(String username, String password);
-
     void changePassword(String username, String oldPassword, String newPassword);
 
     void activate(String username);

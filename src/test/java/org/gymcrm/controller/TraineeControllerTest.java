@@ -6,7 +6,6 @@ import org.gymcrm.aspect.SecurityAspect;
 import org.gymcrm.dto.request.*;
 import org.gymcrm.dto.response.*;
 import org.gymcrm.exception.GlobalExceptionHandler;
-import org.gymcrm.filter.AuthenticationContextFilter;
 import org.gymcrm.mapper.ShortInfoMapper;
 import org.gymcrm.mapper.TraineeMapper;
 import org.gymcrm.mapper.TrainingMapper;

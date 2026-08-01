@@ -1,7 +1,6 @@
 package org.gymcrm.service.impl;
 
 import org.gymcrm.actuator.GymMetrics;
-import org.gymcrm.annotation.RequireAuth;
 import org.gymcrm.dao.TrainerDao;
 import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.exception.ValidationException;
@@ -53,7 +52,6 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
     @Override
-    @RequireAuth
     public Trainer update(Trainer trainer) {
         validateTrainer(trainer, true);
         if (!trainerDao.existsByUsername(trainer.getUser().getUsername())) {
@@ -64,21 +62,18 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     @Transactional(readOnly = true)
-    @RequireAuth
     public Optional<Trainer> selectById(Long id) {
         return trainerDao.findById(id);
     }
 
     @Override
     @Transactional(readOnly = true)
-    @RequireAuth
     public List<Trainer> selectAll() {
         return trainerDao.findAll();
     }
 
     @Override
     @Transactional(readOnly = true)
-    @RequireAuth
     public Optional<Trainer> selectByUsername(String username) {
         if (username == null || username.isBlank()) {
             throw new ValidationException("Username must not be empty");
@@ -88,7 +83,6 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     @Transactional(readOnly = true)
-    @RequireAuth
     public List<Trainer> getUnassignedTrainers(String traineeUsername) {
         if (traineeUsername == null || traineeUsername.isBlank()) {
             throw new ValidationException("Trainee username must not be empty");
@@ -98,7 +92,6 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     @Transactional(readOnly = true)
-    @RequireAuth
     public List<Trainer> selectByUsernames(List<String> usernames) {
         if (usernames == null || usernames.isEmpty()) {
             return emptyList();
@@ -107,29 +100,6 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public boolean authenticate(String username, String password) {
-        if (username == null || password == null) {
-            gymMetrics.incrementLoginFailure();
-            return false;
-        }
-
-        boolean authenticated = trainerDao.findByUsername(username)
-                .map(Trainer::getUser)
-                .map(user -> passwordEncoder.matches(password, user.getPassword()))
-                .orElse(false);
-
-        if (authenticated) {
-            gymMetrics.incrementLoginSuccess();
-        } else {
-            gymMetrics.incrementLoginFailure();
-        }
-
-        return authenticated;
-    }
-
-    @Override
-    @RequireAuth
     public void changePassword(String username, String oldPassword, String newPassword) {
         if (newPassword == null || newPassword.isBlank()) {
             throw new ValidationException("New password cannot be empty");
@@ -149,7 +119,6 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
     @Override
-    @RequireAuth
     public void activate(String username) {
         Trainer trainer = trainerDao.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Trainer with username " + username + " not found"));
@@ -165,7 +134,6 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
     @Override
-    @RequireAuth
     public void deactivate(String username) {
         Trainer trainer = trainerDao.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Trainer with username " + username + " not found"));

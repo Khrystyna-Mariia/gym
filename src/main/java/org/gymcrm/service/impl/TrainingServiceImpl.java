@@ -1,7 +1,6 @@
 package org.gymcrm.service.impl;
 
 import org.gymcrm.actuator.GymMetrics;
-import org.gymcrm.annotation.RequireAuth;
 import org.gymcrm.dao.TrainingDao;
 import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.exception.ValidationException;
@@ -39,7 +38,6 @@ public class TrainingServiceImpl implements TrainingService {
     }
 
     @Override
-    @RequireAuth
     public Training create(Training training) {
         validateTraining(training);
         Training savedTraining = trainingDao.save(training);
@@ -50,28 +48,24 @@ public class TrainingServiceImpl implements TrainingService {
 
     @Override
     @Transactional(readOnly = true)
-    @RequireAuth
     public Optional<Training> selectById(Long id) {
         return trainingDao.findById(id);
     }
 
     @Override
     @Transactional(readOnly = true)
-    @RequireAuth
     public List<Training> selectAll() {
         return trainingDao.findAll();
     }
 
     @Override
     @Transactional(readOnly = true)
-    @RequireAuth
     public List<Training> getTraineeTrainings(String username, LocalDate from, LocalDate to, String trainerName, String typeName) {
         return trainingDao.findTraineeTrainings(username, from, to, trainerName, typeName);
     }
 
     @Override
     @Transactional(readOnly = true)
-    @RequireAuth
     public List<Training> getTrainerTrainings(String username, LocalDate from, LocalDate to, String traineeName) {
         return trainingDao.findTrainerTrainings(username, from, to, traineeName);
     }

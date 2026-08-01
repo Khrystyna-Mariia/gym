@@ -10,6 +10,8 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
+    private static final String BEARER_AUTH = "bearerAuth";
+
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
@@ -17,9 +19,10 @@ public class OpenApiConfig {
                         .title("Gym CRM REST API")
                         .version("1.0")
                         .description("REST API for Gym CRM application"))
-                .addSecurityItem(new SecurityRequirement().addList("basicAuth"))
-                .schemaRequirement("basicAuth", new SecurityScheme()
+                .addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH))
+                .schemaRequirement(BEARER_AUTH, new SecurityScheme()
                         .type(SecurityScheme.Type.HTTP)
-                        .scheme("basic"));
+                        .scheme("bearer")
+                        .bearerFormat("JWT"));
     }
 }
