@@ -9,6 +9,7 @@ import org.gymcrm.security.LoginAttemptService;
 import org.gymcrm.security.UserPrincipal;
 import org.gymcrm.service.TraineeService;
 import org.gymcrm.service.TrainerService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +21,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -28,7 +30,6 @@ import java.time.Duration;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -77,6 +78,11 @@ class AuthControllerTest {
         user.setActive(true);
         user.setRole(Role.TRAINEE);
         traineePrincipal = new UserPrincipal(user);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -136,8 +142,11 @@ class AuthControllerTest {
 
     @Test
     void changePassword_returnsOk_andDelegatesToTraineeService() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(traineePrincipal, null, traineePrincipal.getAuthorities())
+        );
+
         mockMvc.perform(put("/api/v1/auth/password")
-                        .with(user(traineePrincipal))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"oldPassword":"old123","newPassword":"new456"}
@@ -157,8 +166,11 @@ class AuthControllerTest {
         trainerUser.setRole(Role.TRAINER);
         UserPrincipal trainerPrincipal = new UserPrincipal(trainerUser);
 
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(trainerPrincipal, null, trainerPrincipal.getAuthorities())
+        );
+
         mockMvc.perform(put("/api/v1/auth/password")
-                        .with(user(trainerPrincipal))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"oldPassword":"old123","newPassword":"new456"}

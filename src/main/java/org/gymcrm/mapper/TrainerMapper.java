@@ -2,7 +2,6 @@ package org.gymcrm.mapper;
 
 import org.gymcrm.dto.request.TrainerRegistrationRequest;
 import org.gymcrm.dto.request.UpdateTrainerProfileRequest;
-import org.gymcrm.dto.response.RegistrationResponse;
 import org.gymcrm.dto.response.TrainerProfileResponse;
 import org.gymcrm.dto.response.UpdateTrainerProfileResponse;
 import org.gymcrm.model.Trainer;

@@ -4,17 +4,31 @@ import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 
+@ExtendWith(MockitoExtension.class)
 class InitialDataParserTest {
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
     private InitialDataParser parser;
 
     @BeforeEach
     void setUp() {
-        parser = new InitialDataParser();
+        lenient().when(passwordEncoder.encode(anyString()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        parser = new InitialDataParser(passwordEncoder);
     }
 
     @Test
@@ -188,5 +202,4 @@ class InitialDataParserTest {
 
         assertThrows(ValidationException.class, () -> parser.parseTrainee(parts));
     }
-
 }

@@ -100,7 +100,7 @@ class TrainingDaoImplTest {
     private Training createAndPersistFullTraining(String traineeUser, String trainerUser, String trainingName, LocalDate date) {
         Session session = getCurrentSession();
 
-        User u1 = new User(null, "TraineeFN", "TraineeLN", traineeUser, "pass", true);
+        User u1 = new User(null, "TraineeFN", "TraineeLN", traineeUser, "pass", true, Role.TRAINEE);
         Trainee trainee = new Trainee(null, LocalDate.of(2000, 1, 1), "Kyiv", u1, new HashSet<>(), new ArrayList<>());
         session.persist(trainee);
 
@@ -109,12 +109,13 @@ class TrainingDaoImplTest {
                 .setParameter("name", TrainingTypeEnum.FITNESS)
                 .uniqueResultOptional()
                 .orElseGet(() -> {
-                    TrainingType newType = new TrainingType(null, TrainingTypeEnum.FITNESS);
+                    TrainingType newType = new TrainingType();
+                    newType.setTrainingTypeName(TrainingTypeEnum.FITNESS);
                     session.persist(newType);
                     return newType;
                 });
 
-        User u2 = new User(null, "TrainerFN", "TrainerLN", trainerUser, "pass", true);
+        User u2 = new User(null, "TrainerFN", "TrainerLN", trainerUser, "pass", true, Role.TRAINER);
         Trainer trainer = new Trainer(null, type, u2, new HashSet<>());
         session.persist(trainer);
 

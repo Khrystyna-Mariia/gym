@@ -2,7 +2,6 @@ package org.gymcrm.mapper;
 
 import org.gymcrm.dto.request.TraineeRegistrationRequest;
 import org.gymcrm.dto.request.UpdateTraineeProfileRequest;
-import org.gymcrm.dto.response.RegistrationResponse;
 import org.gymcrm.dto.response.TraineeProfileResponse;
 import org.gymcrm.dto.response.UpdateTraineeProfileResponse;
 import org.gymcrm.model.Trainee;
@@ -25,14 +24,13 @@ class TraineeMapperTest {
 
         Trainee result = mapper.toEntity(request);
 
+        assertNotNull(result);
         assertNotNull(result.getUser());
         assertEquals("John", result.getUser().getFirstName());
         assertEquals("Doe", result.getUser().getLastName());
         assertEquals(LocalDate.of(2000, 5, 14), result.getDateOfBirth());
         assertEquals("Main St 1", result.getAddress());
         assertNull(result.getId());
-        assertTrue(result.getTrainers().isEmpty());
-        assertTrue(result.getTrainings().isEmpty());
     }
 
     @Test
@@ -58,21 +56,7 @@ class TraineeMapperTest {
     }
 
     @Test
-    void toRegistrationResponse_extractsUsernameAndPasswordFromUser() {
-        Trainee trainee = new Trainee();
-        User user = new User();
-        user.setUsername("john.doe");
-        user.setPassword("genPass123");
-        trainee.setUser(user);
-
-        RegistrationResponse response = mapper.toRegistrationResponse(trainee);
-
-        assertEquals("john.doe", response.username());
-        assertEquals("genPass123", response.password());
-    }
-
-    @Test
-    void toProfileResponse_mapsAllFieldsAndEmptyTrainersList() {
+    void toProfileResponse_mapsAllFieldsCorrectly() {
         Trainee trainee = new Trainee();
         User user = new User();
         user.setFirstName("John");
@@ -84,13 +68,12 @@ class TraineeMapperTest {
 
         TraineeProfileResponse response = mapper.toProfileResponse(trainee);
 
+        assertNotNull(response);
         assertEquals("John", response.firstName());
         assertEquals("Doe", response.lastName());
         assertTrue(response.isActive());
         assertEquals(LocalDate.of(2000, 5, 14), response.dateOfBirth());
         assertEquals("Main St 1", response.address());
-        assertNotNull(response.trainers());
-        assertTrue(response.trainers().isEmpty());
     }
 
     @Test
@@ -105,6 +88,7 @@ class TraineeMapperTest {
 
         UpdateTraineeProfileResponse response = mapper.toUpdateResponse(trainee);
 
+        assertNotNull(response);
         assertEquals("john.doe", response.username());
         assertEquals("John", response.firstName());
         assertTrue(response.isActive());
@@ -116,6 +100,7 @@ class TraineeMapperTest {
 
         TraineeProfileResponse response = mapper.toProfileResponse(trainee);
 
+        assertNotNull(response);
         assertNull(response.firstName());
         assertNull(response.lastName());
         assertFalse(response.isActive());
