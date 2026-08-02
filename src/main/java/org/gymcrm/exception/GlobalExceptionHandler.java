@@ -68,6 +68,12 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, "Resource not found", request);
     }
 
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<ErrorResponse> handleAccountLocked(AccountLockedException ex, HttpServletRequest request) {
+        logger.warn("Blocked login attempt on {}: {}", request.getRequestURI(), ex.getMessage());
+        return build(HttpStatus.LOCKED, ex.getMessage(), request);
+    }
+
     private String formatFieldError(FieldError error) {
         return "%s: %s".formatted(error.getField(), error.getDefaultMessage());
     }
