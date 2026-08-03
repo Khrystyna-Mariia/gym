@@ -1,7 +1,6 @@
 package org.gymcrm.security;
 
 import org.gymcrm.dao.UserDao;
-import org.gymcrm.model.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;

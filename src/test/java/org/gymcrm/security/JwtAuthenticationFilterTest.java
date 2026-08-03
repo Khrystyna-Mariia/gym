@@ -20,6 +20,7 @@ class JwtAuthenticationFilterTest {
 
     @Mock private JwtService jwtService;
     @Mock private CustomUserDetailsService userDetailsService;
+    @Mock private TokenBlacklistService tokenBlacklistService;
     @Mock private FilterChain filterChain;
 
     private JwtAuthenticationFilter filter;
@@ -30,13 +31,14 @@ class JwtAuthenticationFilterTest {
     }
 
     private void initFilter() {
-        filter = new JwtAuthenticationFilter(jwtService, userDetailsService);
+        filter = new JwtAuthenticationFilter(jwtService, userDetailsService, tokenBlacklistService);
     }
 
     private UserPrincipal principal(String username) {
         User user = new User();
         user.setUsername(username);
         user.setRole(Role.TRAINEE);
+        user.setActive(true);
         return new UserPrincipal(user);
     }
 
@@ -48,6 +50,7 @@ class JwtAuthenticationFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         UserPrincipal principal = principal("john.doe");
+        when(tokenBlacklistService.isBlacklisted("valid-token")).thenReturn(false);
         when(jwtService.extractUsername("valid-token")).thenReturn("john.doe");
         when(userDetailsService.loadUserByUsername("john.doe")).thenReturn(principal);
         when(jwtService.isTokenValid("valid-token", "john.doe")).thenReturn(true);
@@ -67,9 +70,49 @@ class JwtAuthenticationFilterTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         UserPrincipal principal = principal("john.doe");
+        when(tokenBlacklistService.isBlacklisted("invalid-token")).thenReturn(false);
         when(jwtService.extractUsername("invalid-token")).thenReturn("john.doe");
         when(userDetailsService.loadUserByUsername("john.doe")).thenReturn(principal);
         when(jwtService.isTokenValid("invalid-token", "john.doe")).thenReturn(false);
+
+        filter.doFilter(request, response, filterChain);
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void doFilter_doesNotSetAuthentication_whenTokenIsBlacklisted() throws Exception {
+        initFilter();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer logged-out-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        when(tokenBlacklistService.isBlacklisted("logged-out-token")).thenReturn(true);
+
+        filter.doFilter(request, response, filterChain);
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verifyNoInteractions(jwtService, userDetailsService);
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void doFilter_doesNotSetAuthentication_whenAccountIsDeactivated() throws Exception {
+        initFilter();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer valid-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        User deactivatedUser = new User();
+        deactivatedUser.setUsername("john.doe");
+        deactivatedUser.setRole(Role.TRAINEE);
+        deactivatedUser.setActive(false);
+        UserPrincipal deactivatedPrincipal = new UserPrincipal(deactivatedUser);
+
+        when(tokenBlacklistService.isBlacklisted("valid-token")).thenReturn(false);
+        when(jwtService.extractUsername("valid-token")).thenReturn("john.doe");
+        when(userDetailsService.loadUserByUsername("john.doe")).thenReturn(deactivatedPrincipal);
 
         filter.doFilter(request, response, filterChain);
 
@@ -86,7 +129,7 @@ class JwtAuthenticationFilterTest {
         filter.doFilter(request, response, filterChain);
 
         assertNull(SecurityContextHolder.getContext().getAuthentication());
-        verifyNoInteractions(jwtService, userDetailsService);
+        verifyNoInteractions(jwtService, userDetailsService, tokenBlacklistService);
         verify(filterChain).doFilter(request, response);
     }
 
@@ -100,7 +143,7 @@ class JwtAuthenticationFilterTest {
         filter.doFilter(request, response, filterChain);
 
         assertNull(SecurityContextHolder.getContext().getAuthentication());
-        verifyNoInteractions(jwtService, userDetailsService);
+        verifyNoInteractions(jwtService, userDetailsService, tokenBlacklistService);
     }
 
     @Test
@@ -110,6 +153,7 @@ class JwtAuthenticationFilterTest {
         request.addHeader("Authorization", "Bearer some-token");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
+        when(tokenBlacklistService.isBlacklisted("some-token")).thenReturn(false);
         when(jwtService.extractUsername("some-token")).thenReturn("ghost");
         when(userDetailsService.loadUserByUsername("ghost"))
                 .thenThrow(new org.springframework.security.core.userdetails.UsernameNotFoundException("not found"));
@@ -132,6 +176,6 @@ class JwtAuthenticationFilterTest {
         filter.doFilter(request, response, filterChain);
 
         assertEquals("existing", SecurityContextHolder.getContext().getAuthentication().getName());
-        verifyNoInteractions(jwtService, userDetailsService);
+        verifyNoInteractions(jwtService, userDetailsService, tokenBlacklistService);
     }
 }

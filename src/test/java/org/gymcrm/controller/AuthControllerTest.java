@@ -6,6 +6,7 @@ import org.gymcrm.model.Role;
 import org.gymcrm.model.User;
 import org.gymcrm.security.JwtService;
 import org.gymcrm.security.LoginAttemptService;
+import org.gymcrm.security.TokenBlacklistService;
 import org.gymcrm.security.UserPrincipal;
 import org.gymcrm.service.TraineeService;
 import org.gymcrm.service.TrainerService;
@@ -27,9 +28,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.Duration;
+import java.time.Instant;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -55,6 +58,9 @@ class AuthControllerTest {
 
     @Mock
     private LoginAttemptService loginAttemptService;
+
+    @Mock
+    private TokenBlacklistService tokenBlacklistService;
 
     @Mock
     private Authentication authentication;
@@ -138,6 +144,28 @@ class AuthControllerTest {
 
         verifyNoInteractions(authenticationManager);
         verify(loginAttemptService, never()).loginFailed(any());
+    }
+
+    @Test
+    void logout_blacklistsToken_whenBearerHeaderPresent() throws Exception {
+        Instant expiry = Instant.parse("2026-06-01T00:00:00Z");
+        when(jwtService.extractExpiration("valid-token")).thenReturn(expiry);
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .header("Authorization", "Bearer valid-token")
+                        .with(user(traineePrincipal)))
+                .andExpect(status().isOk());
+
+        verify(tokenBlacklistService).blacklist("valid-token", expiry);
+    }
+
+    @Test
+    void logout_doesNothing_whenNoAuthorizationHeader() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .with(user(traineePrincipal)))
+                .andExpect(status().isOk());
+
+        verifyNoInteractions(tokenBlacklistService, jwtService);
     }
 
     @Test
