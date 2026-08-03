@@ -1,5 +1,7 @@
 package org.gymcrm.controller;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,6 +26,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -96,9 +100,15 @@ public class AuthController {
         }
 
         String token = header.substring(BEARER_PREFIX.length());
-        java.time.Instant expiresAt = jwtService.extractExpiration(token);
-        tokenBlacklistService.blacklist(token, expiresAt);
-        logger.info("User logged out, token blacklisted");
+        try {
+            Instant expiresAt = jwtService.extractExpiration(token);
+            tokenBlacklistService.blacklist(token, expiresAt);
+            logger.info("User logged out, token blacklisted");
+        } catch (ExpiredJwtException e) {
+            logger.debug("Logout called with an already-expired token; nothing to blacklist");
+        } catch (JwtException | IllegalArgumentException e) {
+            logger.debug("Logout called with a malformed token: {}", e.getMessage());
+        }
     }
 
     @PutMapping("/password")
