@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TrainerService {
-    Trainer create(Trainer trainer);
+    RegistrationResult<Trainer> create(Trainer trainer);
 
     Trainer update(Trainer trainer);
 
@@ -19,8 +19,6 @@ public interface TrainerService {
     List<Trainer> getUnassignedTrainers(String traineeUsername);
 
     List<Trainer> selectByUsernames(List<String> usernames);
-
-    boolean authenticate(String username, String password);
 
     void changePassword(String username, String oldPassword, String newPassword);
 

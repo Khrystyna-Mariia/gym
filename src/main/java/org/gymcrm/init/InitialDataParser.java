@@ -2,6 +2,7 @@ package org.gymcrm.init;
 
 import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -13,6 +14,12 @@ public class InitialDataParser {
     private static final int TRAINEE_FIELD_COUNT = 9;
     private static final int TRAINER_FIELD_COUNT = 8;
     private static final int TRAINING_FIELD_COUNT = 8;
+
+    private final PasswordEncoder passwordEncoder;
+
+    public InitialDataParser(PasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
+    }
 
     public TrainingType parseTrainingType(String[] parts) {
         validateFieldCount(parts, TRAINING_TYPE_FIELD_COUNT, "TRAINING_TYPE");
@@ -34,6 +41,7 @@ public class InitialDataParser {
         validateFieldCount(parts, TRAINEE_FIELD_COUNT, "TRAINEE");
 
         User user = parseUserFields(parts);
+        user.setRole(Role.TRAINEE);
 
         Trainee trainee = new Trainee();
         trainee.setUser(user);
@@ -46,6 +54,8 @@ public class InitialDataParser {
         validateFieldCount(parts, TRAINER_FIELD_COUNT, "TRAINER");
 
         User user = parseUserFields(parts);
+        user.setRole(Role.TRAINER);
+
         Trainer trainer = new Trainer();
         trainer.setUser(user);
 
@@ -69,7 +79,10 @@ public class InitialDataParser {
         user.setFirstName(required(parts[2], "first name"));
         user.setLastName(required(parts[3], "last name"));
         user.setUsername(required(parts[4], "username"));
-        user.setPassword(required(parts[5], "password"));
+
+        String rawPassword = required(parts[5], "password");
+        user.setPassword(passwordEncoder.encode(rawPassword));
+
         user.setActive(parseBoolean(parts[6], "active status"));
         return user;
     }

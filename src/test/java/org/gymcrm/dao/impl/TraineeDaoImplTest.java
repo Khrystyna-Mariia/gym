@@ -1,6 +1,7 @@
 package org.gymcrm.dao.impl;
 
 import org.gymcrm.dao.TraineeDao;
+import org.gymcrm.model.Role;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.model.User;
 import org.hibernate.Session;
@@ -124,7 +125,7 @@ class TraineeDaoImplTest {
     }
 
     private Trainee createTrainee(Long id, String username) {
-        User user = new User(id, "First", "Last", username, "password123", true);
+        User user = new User(id, "First", "Last", username, "password123", true, Role.TRAINEE);
         return new Trainee(id, LocalDate.of(2000, 1, 1), "Kyiv", user, new HashSet<>(), new ArrayList<>());
     }
 }

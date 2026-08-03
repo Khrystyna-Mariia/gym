@@ -2,7 +2,6 @@ package org.gymcrm.mapper;
 
 import org.gymcrm.dto.request.TraineeRegistrationRequest;
 import org.gymcrm.dto.request.UpdateTraineeProfileRequest;
-import org.gymcrm.dto.response.RegistrationResponse;
 import org.gymcrm.dto.response.TraineeProfileResponse;
 import org.gymcrm.dto.response.UpdateTraineeProfileResponse;
 import org.gymcrm.model.Trainee;
@@ -27,10 +26,6 @@ public interface TraineeMapper {
     @Mapping(target = "trainers", ignore = true)
     @Mapping(target = "trainings", ignore = true)
     void updateEntityFromRequest(UpdateTraineeProfileRequest request, @MappingTarget Trainee trainee);
-
-    @Mapping(target = "username", source = "user.username")
-    @Mapping(target = "password", source = "user.password")
-    RegistrationResponse toRegistrationResponse(Trainee trainee);
 
     @Mapping(target = "firstName", source = "user.firstName")
     @Mapping(target = "lastName", source = "user.lastName")

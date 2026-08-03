@@ -33,7 +33,7 @@ class TrainerDaoImplTest {
 
     @Test
     void shouldSaveTrainer() {
-        Trainer trainer = createTrainer(null, "Michael.Green");
+        Trainer trainer = createTrainer("Michael.Green");
 
         Trainer savedTrainer = trainerDao.save(trainer);
 
@@ -42,7 +42,7 @@ class TrainerDaoImplTest {
 
     @Test
     void shouldUpdateTrainer() {
-        Trainer trainer = createTrainer(null, "Michael.Green");
+        Trainer trainer = createTrainer("Michael.Green");
         getCurrentSession().persist(trainer);
         getCurrentSession().flush();
 
@@ -54,7 +54,7 @@ class TrainerDaoImplTest {
 
     @Test
     void shouldFindTrainerById() {
-        Trainer trainer = createTrainer(null, "Michael.Green");
+        Trainer trainer = createTrainer("Michael.Green");
         getCurrentSession().persist(trainer);
         getCurrentSession().flush();
 
@@ -66,8 +66,8 @@ class TrainerDaoImplTest {
 
     @Test
     void shouldFindAllTrainers() {
-        getCurrentSession().persist(createTrainer(null, "Michael.Green"));
-        getCurrentSession().persist(createTrainer(null, "Olivia.White"));
+        getCurrentSession().persist(createTrainer("Michael.Green"));
+        getCurrentSession().persist(createTrainer("Olivia.White"));
         getCurrentSession().flush();
 
         List<Trainer> result = trainerDao.findAll();
@@ -76,7 +76,7 @@ class TrainerDaoImplTest {
 
     @Test
     void shouldReturnTrueWhenTrainerUsernameExists() {
-        Trainer trainer = createTrainer(null, "exists.trainer");
+        Trainer trainer = createTrainer("exists.trainer");
         getCurrentSession().persist(trainer);
         getCurrentSession().flush();
 
@@ -86,7 +86,7 @@ class TrainerDaoImplTest {
 
     @Test
     void shouldFindByUsername() {
-        Trainer trainer = createTrainer(null, "find.trainer");
+        Trainer trainer = createTrainer("find.trainer");
         getCurrentSession().persist(trainer);
         getCurrentSession().flush();
 
@@ -110,15 +110,15 @@ class TrainerDaoImplTest {
             session.persist(type);
         }
 
-        Trainer assignedTrainer = createTrainer(null, "assigned.coach");
+        Trainer assignedTrainer = createTrainer("assigned.coach");
         assignedTrainer.setSpecialization(type);
         session.persist(assignedTrainer);
 
-        Trainer unassignedTrainer = createTrainer(null, "free.coach");
+        Trainer unassignedTrainer = createTrainer("free.coach");
         unassignedTrainer.setSpecialization(type);
         session.persist(unassignedTrainer);
 
-        User traineeUser = new User(null, "TraineeFirst", "TraineeLast", "john.smith", "pass", true);
+        User traineeUser = new User(null, "TraineeFirst", "TraineeLast", "john.smith", "pass", true, Role.TRAINEE);
         Trainee trainee = new Trainee(null, LocalDate.now(), "Address", traineeUser, new HashSet<>(), new ArrayList<>());
         trainee.getTrainers().add(assignedTrainer);
 
@@ -134,10 +134,10 @@ class TrainerDaoImplTest {
         assertFalse(containsAssigned);
     }
 
-    private Trainer createTrainer(Long id, String username) {
+    private Trainer createTrainer(String username) {
         Session session = getCurrentSession();
 
-        User user = new User(null, "First", "Last", username, "password123", true);
+        User user = new User(null, "First", "Last", username, "password123", true, Role.TRAINER);
 
         TrainingType type = session.createQuery(
                         "FROM TrainingType WHERE trainingTypeName = :name", TrainingType.class)
@@ -149,7 +149,7 @@ class TrainerDaoImplTest {
                     return newType;
                 });
 
-        return new Trainer(id, type, user, new HashSet<>());
+        return new Trainer(null, type, user, new HashSet<>());
     }
 
     @Test
@@ -160,9 +160,9 @@ class TrainerDaoImplTest {
 
     @Test
     void shouldFindTrainersByUsernames() {
-        getCurrentSession().persist(createTrainer(null, "trainer.one"));
-        getCurrentSession().persist(createTrainer(null, "trainer.two"));
-        getCurrentSession().persist(createTrainer(null, "trainer.three"));
+        getCurrentSession().persist(createTrainer("trainer.one"));
+        getCurrentSession().persist(createTrainer("trainer.two"));
+        getCurrentSession().persist(createTrainer("trainer.three"));
         getCurrentSession().flush();
 
         List<Trainer> result = trainerDao.findByUsernames(List.of("trainer.one", "trainer.three"));

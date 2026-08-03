@@ -2,7 +2,6 @@ package org.gymcrm.mapper;
 
 import org.gymcrm.dto.request.TrainerRegistrationRequest;
 import org.gymcrm.dto.request.UpdateTrainerProfileRequest;
-import org.gymcrm.dto.response.RegistrationResponse;
 import org.gymcrm.dto.response.TrainerProfileResponse;
 import org.gymcrm.dto.response.UpdateTrainerProfileResponse;
 import org.gymcrm.model.Trainer;
@@ -24,6 +23,7 @@ class TrainerMapperTest {
 
         Trainer result = mapper.toEntity(request);
 
+        assertNotNull(result.getUser());
         assertEquals("Anna", result.getUser().getFirstName());
         assertEquals("K", result.getUser().getLastName());
         assertNull(result.getSpecialization());
@@ -48,21 +48,7 @@ class TrainerMapperTest {
     }
 
     @Test
-    void toRegistrationResponse_extractsCredentials() {
-        Trainer trainer = new Trainer();
-        User user = new User();
-        user.setUsername("anna.k");
-        user.setPassword("genPass456");
-        trainer.setUser(user);
-
-        RegistrationResponse response = mapper.toRegistrationResponse(trainer);
-
-        assertEquals("anna.k", response.username());
-        assertEquals("genPass456", response.password());
-    }
-
-    @Test
-    void toProfileResponse_mapsAllFieldsWithEmptyTraineesList() {
+    void toProfileResponse_mapsAllFields() {
         Trainer trainer = new Trainer();
         User user = new User();
         user.setFirstName("Anna");
@@ -74,10 +60,9 @@ class TrainerMapperTest {
         TrainerProfileResponse response = mapper.toProfileResponse(trainer);
 
         assertEquals("Anna", response.firstName());
+        assertEquals("K", response.lastName());
         assertEquals("FITNESS", response.specialization());
         assertTrue(response.isActive());
-        assertNotNull(response.trainees());
-        assertTrue(response.trainees().isEmpty());
     }
 
     @Test
@@ -94,7 +79,10 @@ class TrainerMapperTest {
         UpdateTrainerProfileResponse response = mapper.toUpdateResponse(trainer);
 
         assertEquals("anna.k", response.username());
+        assertEquals("Anna", response.firstName());
+        assertEquals("K", response.lastName());
         assertEquals("ZUMBA", response.specialization());
+        assertTrue(response.isActive());
     }
 
     @Test
@@ -104,6 +92,7 @@ class TrainerMapperTest {
         TrainerProfileResponse response = mapper.toProfileResponse(trainer);
 
         assertNull(response.firstName());
+        assertNull(response.lastName());
         assertNull(response.specialization());
         assertFalse(response.isActive());
     }

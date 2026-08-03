@@ -4,9 +4,11 @@ import org.gymcrm.actuator.GymMetrics;
 import org.gymcrm.dao.TraineeDao;
 import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.exception.ValidationException;
+import org.gymcrm.model.Role;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.User;
+import org.gymcrm.service.RegistrationResult;
 import org.gymcrm.service.TrainerService;
 import org.gymcrm.service.UserProfileInitializer;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -38,9 +41,18 @@ class TraineeServiceImplTest {
     @Mock
     private GymMetrics gymMetrics;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
     @BeforeEach
     void setUp() {
-        traineeService = new TraineeServiceImpl(traineeDao, userProfileInitializer, trainerService, gymMetrics);
+        traineeService = new TraineeServiceImpl(
+                traineeDao,
+                userProfileInitializer,
+                trainerService,
+                gymMetrics,
+                passwordEncoder
+        );
     }
 
     @Test
@@ -50,28 +62,28 @@ class TraineeServiceImplTest {
         newTrainee.getUser().setActive(false);
 
         Trainee savedTrainee = createTrainee(2L, "John", "Smith", "John.Smith1");
-        savedTrainee.getUser().setPassword("Generated1");
+        savedTrainee.getUser().setPassword("EncodedGenerated1");
         savedTrainee.getUser().setActive(true);
 
         doAnswer(invocation -> {
             User user = invocation.getArgument(0);
             user.setUsername("John.Smith1");
-            user.setPassword("Generated1");
+            user.setPassword("EncodedGenerated1");
             user.setActive(true);
-            return null;
-        }).when(userProfileInitializer).initialize(any(User.class));
+            return "Generated1";
+        }).when(userProfileInitializer).initialize(any(User.class), eq(Role.TRAINEE));
 
         when(traineeDao.save(newTrainee)).thenReturn(savedTrainee);
 
-        Trainee result = traineeService.create(newTrainee);
+        RegistrationResult<Trainee> result = traineeService.create(newTrainee);
 
         assertNotNull(result);
-        assertEquals(2L, result.getId());
-        assertEquals("John.Smith1", result.getUser().getUsername());
-        assertEquals("Generated1", result.getUser().getPassword());
-        assertTrue(result.getUser().isActive());
+        assertEquals(2L, result.entity().getId());
+        assertEquals("John.Smith1", result.entity().getUser().getUsername());
+        assertEquals("Generated1", result.rawPassword());
+        assertTrue(result.entity().getUser().isActive());
 
-        verify(userProfileInitializer).initialize(newTrainee.getUser());
+        verify(userProfileInitializer).initialize(newTrainee.getUser(), Role.TRAINEE);
         verify(traineeDao).save(newTrainee);
         verify(gymMetrics).incrementTraineeRegistrations();
     }
@@ -179,35 +191,15 @@ class TraineeServiceImplTest {
     }
 
     @Test
-    void shouldAuthenticateSuccessfully() {
-        Trainee trainee = createTrainee(1L, "John", "Smith", "john.smith");
-        when(traineeDao.findByUsername("john.smith")).thenReturn(Optional.of(trainee));
-
-        boolean authenticated = traineeService.authenticate("john.smith", "password123");
-
-        assertTrue(authenticated);
-        verify(gymMetrics).incrementLoginSuccess();
-    }
-
-    @Test
-    void shouldFailAuthenticationWithWrongPassword() {
-        Trainee trainee = createTrainee(1L, "John", "Smith", "john.smith");
-        when(traineeDao.findByUsername("john.smith")).thenReturn(Optional.of(trainee));
-
-        boolean authenticated = traineeService.authenticate("john.smith", "wrong_pass");
-
-        assertFalse(authenticated);
-        verify(gymMetrics).incrementLoginFailure();
-    }
-
-    @Test
     void shouldChangePasswordWhenOldPasswordMatches() {
         Trainee trainee = createTrainee(1L, "John", "Smith", "john.smith");
         when(traineeDao.findByUsername("john.smith")).thenReturn(Optional.of(trainee));
+        when(passwordEncoder.matches("password123", "password123")).thenReturn(true);
+        when(passwordEncoder.encode("newSecretPass")).thenReturn("encodedNewSecretPass");
 
         traineeService.changePassword("john.smith", "password123", "newSecretPass");
 
-        assertEquals("newSecretPass", trainee.getUser().getPassword());
+        assertEquals("encodedNewSecretPass", trainee.getUser().getPassword());
         verify(traineeDao).update(trainee);
     }
 
@@ -240,11 +232,10 @@ class TraineeServiceImplTest {
         Trainee trainee = createTrainee(1L, "John", "Smith", "john.smith");
         Trainer trainer = new Trainer();
         trainer.setId(10L);
-        User trainerUser = new User(10L, "Jack", "Coach", "trainer.jack", "pass", true);
+        User trainerUser = new User(10L, "Jack", "Coach", "trainer.jack", "pass", true, Role.TRAINER);
         trainer.setUser(trainerUser);
 
         when(traineeDao.findByUsername("john.smith")).thenReturn(Optional.of(trainee));
-
         when(trainerService.selectByUsernames(List.of("trainer.jack"))).thenReturn(List.of(trainer));
 
         traineeService.updateTrainersList("john.smith", List.of("trainer.jack"));
@@ -281,23 +272,6 @@ class TraineeServiceImplTest {
     }
 
     @Test
-    void authenticate_shouldReturnFalseWhenArgsNull() {
-        assertFalse(traineeService.authenticate(null, "password"));
-        verify(gymMetrics).incrementLoginFailure();
-
-        assertFalse(traineeService.authenticate("username", null));
-        verify(gymMetrics, times(2)).incrementLoginFailure();
-    }
-
-    @Test
-    void authenticate_shouldReturnFalseWhenTraineeNotFound() {
-        when(traineeDao.findByUsername("ghost")).thenReturn(Optional.empty());
-
-        assertFalse(traineeService.authenticate("ghost", "password"));
-        verify(gymMetrics).incrementLoginFailure();
-    }
-
-    @Test
     void deleteByUsername_shouldThrowWhenUsernameNullOrBlank() {
         assertThrows(ValidationException.class, () -> traineeService.deleteByUsername(null));
         assertThrows(ValidationException.class, () -> traineeService.deleteByUsername(""));
@@ -325,6 +299,7 @@ class TraineeServiceImplTest {
     void changePassword_shouldThrowWhenOldPasswordMismatches() {
         Trainee trainee = createTrainee(1L, "John", "Smith", "john.smith");
         when(traineeDao.findByUsername("john.smith")).thenReturn(Optional.of(trainee));
+        when(passwordEncoder.matches("wrong_old_pass", "password123")).thenReturn(false);
 
         assertThrows(ValidationException.class, () -> traineeService.changePassword("john.smith", "wrong_old_pass", "newPass"));
     }
@@ -377,7 +352,7 @@ class TraineeServiceImplTest {
         when(traineeDao.findByUsername("john.smith")).thenReturn(Optional.of(trainee));
 
         Trainer existingTrainer = new Trainer();
-        existingTrainer.setUser(new User(10L, "Jack", "Coach", "trainer.jack", "pass", true));
+        existingTrainer.setUser(new User(10L, "Jack", "Coach", "trainer.jack", "pass", true, Role.TRAINER));
 
         List<String> requestedUsernames = List.of("trainer.jack", "missing.trainer");
         when(trainerService.selectByUsernames(requestedUsernames)).thenReturn(List.of(existingTrainer));
@@ -388,7 +363,7 @@ class TraineeServiceImplTest {
     }
 
     private Trainee createTrainee(Long id, String firstName, String lastName, String username) {
-        User user = new User(id, firstName, lastName, username, "password123", true);
+        User user = new User(id, firstName, lastName, username, "password123", true, Role.TRAINEE);
         Trainee trainee = new Trainee();
         trainee.setId(id);
         trainee.setUser(user);

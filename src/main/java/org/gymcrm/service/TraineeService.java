@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TraineeService {
-    Trainee create(Trainee trainee);
+    RegistrationResult<Trainee> create(Trainee trainee);
 
     Trainee update(Trainee trainee);
 
@@ -17,8 +17,6 @@ public interface TraineeService {
     List<Trainee> selectAll();
 
     Optional<Trainee> selectByUsername(String username);
-
-    boolean authenticate(String username, String password);
 
     void changePassword(String username, String oldPassword, String newPassword);
 

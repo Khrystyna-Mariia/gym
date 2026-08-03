@@ -4,16 +4,19 @@ import org.gymcrm.actuator.GymMetrics;
 import org.gymcrm.dao.TrainerDao;
 import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.exception.ValidationException;
+import org.gymcrm.model.Role;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.TrainingType;
 import org.gymcrm.model.TrainingTypeEnum;
 import org.gymcrm.model.User;
+import org.gymcrm.service.RegistrationResult;
 import org.gymcrm.service.UserProfileInitializer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +26,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TrainerServiceImplTest {
+
     private TrainerServiceImpl trainerService;
 
     @Mock
@@ -34,9 +38,17 @@ class TrainerServiceImplTest {
     @Mock
     private GymMetrics gymMetrics;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
     @BeforeEach
     void setUp() {
-        trainerService = new TrainerServiceImpl(trainerDao, userProfileInitializer, gymMetrics);
+        trainerService = new TrainerServiceImpl(
+                trainerDao,
+                userProfileInitializer,
+                gymMetrics,
+                passwordEncoder
+        );
     }
 
     @Test
@@ -46,27 +58,28 @@ class TrainerServiceImplTest {
         newTrainer.getUser().setActive(false);
 
         Trainer savedTrainer = createTrainer(2L, "John", "Smith", "John.Smith1");
-        savedTrainer.getUser().setPassword("Generated1");
+        savedTrainer.getUser().setPassword("EncodedGenerated1");
         savedTrainer.getUser().setActive(true);
 
         doAnswer(invocation -> {
             User user = invocation.getArgument(0);
             user.setUsername("John.Smith1");
-            user.setPassword("Generated1");
+            user.setPassword("EncodedGenerated1");
             user.setActive(true);
-            return null;
-        }).when(userProfileInitializer).initialize(any(User.class));
+            return "Generated1";
+        }).when(userProfileInitializer).initialize(any(User.class), eq(Role.TRAINER));
 
         when(trainerDao.save(newTrainer)).thenReturn(savedTrainer);
 
-        Trainer result = trainerService.create(newTrainer);
+        RegistrationResult<Trainer> result = trainerService.create(newTrainer);
 
         assertNotNull(result);
-        assertEquals(2L, result.getId());
-        assertEquals("John.Smith1", result.getUser().getUsername());
-        assertTrue(result.getUser().isActive());
+        assertEquals(2L, result.entity().getId());
+        assertEquals("John.Smith1", result.entity().getUser().getUsername());
+        assertEquals("Generated1", result.rawPassword());
+        assertTrue(result.entity().getUser().isActive());
 
-        verify(userProfileInitializer).initialize(newTrainer.getUser());
+        verify(userProfileInitializer).initialize(newTrainer.getUser(), Role.TRAINER);
         verify(trainerDao).save(newTrainer);
         verify(gymMetrics).incrementTrainerRegistrations();
     }
@@ -181,35 +194,15 @@ class TrainerServiceImplTest {
     }
 
     @Test
-    void shouldAuthenticateSuccessfully() {
-        Trainer trainer = createTrainer(1L, "Alex", "Brown", "alex.brown");
-        when(trainerDao.findByUsername("alex.brown")).thenReturn(Optional.of(trainer));
-
-        boolean result = trainerService.authenticate("alex.brown", "password123");
-
-        assertTrue(result);
-        verify(gymMetrics).incrementLoginSuccess();
-    }
-
-    @Test
-    void shouldFailAuthenticationWithWrongPassword() {
-        Trainer trainer = createTrainer(1L, "Alex", "Brown", "alex.brown");
-        when(trainerDao.findByUsername("alex.brown")).thenReturn(Optional.of(trainer));
-
-        boolean result = trainerService.authenticate("alex.brown", "wrong_password");
-
-        assertFalse(result);
-        verify(gymMetrics).incrementLoginFailure();
-    }
-
-    @Test
     void shouldChangePasswordSuccessfully() {
         Trainer trainer = createTrainer(1L, "Alex", "Brown", "alex.brown");
         when(trainerDao.findByUsername("alex.brown")).thenReturn(Optional.of(trainer));
+        when(passwordEncoder.matches("password123", "password123")).thenReturn(true);
+        when(passwordEncoder.encode("newPassword777")).thenReturn("encodedNewPassword777");
 
         trainerService.changePassword("alex.brown", "password123", "newPassword777");
 
-        assertEquals("newPassword777", trainer.getUser().getPassword());
+        assertEquals("encodedNewPassword777", trainer.getUser().getPassword());
         verify(trainerDao).update(trainer);
     }
 
@@ -265,25 +258,6 @@ class TrainerServiceImplTest {
     }
 
     @Test
-    void shouldReturnFalseWhenAuthenticationParamsNull() {
-        assertFalse(trainerService.authenticate(null, "password"));
-        verify(gymMetrics).incrementLoginFailure();
-
-        assertFalse(trainerService.authenticate("username", null));
-        verify(gymMetrics, times(2)).incrementLoginFailure();
-
-        assertFalse(trainerService.authenticate(null, null));
-        verify(gymMetrics, times(3)).incrementLoginFailure();
-    }
-
-    @Test
-    void shouldReturnFalseWhenTrainerNotFoundForAuthentication() {
-        when(trainerDao.findByUsername("unknown")).thenReturn(Optional.empty());
-        assertFalse(trainerService.authenticate("unknown", "password"));
-        verify(gymMetrics).incrementLoginFailure();
-    }
-
-    @Test
     void shouldThrowExceptionWhenNewPasswordIsEmpty() {
         assertThrows(ValidationException.class, () ->
                 trainerService.changePassword("user", "old", "  "));
@@ -300,6 +274,7 @@ class TrainerServiceImplTest {
     void shouldThrowExceptionWhenOldPasswordIsInvalid() {
         Trainer trainer = createTrainer(1L, "A", "B", "user");
         when(trainerDao.findByUsername("user")).thenReturn(Optional.of(trainer));
+        when(passwordEncoder.matches("wrong_old", "password123")).thenReturn(false);
 
         assertThrows(ValidationException.class, () ->
                 trainerService.changePassword("user", "wrong_old", "newPass"));
@@ -358,7 +333,7 @@ class TrainerServiceImplTest {
     }
 
     private Trainer createTrainer(Long id, String firstName, String lastName, String username) {
-        User user = new User(id, firstName, lastName, username, "password123", true);
+        User user = new User(id, firstName, lastName, username, "password123", true, Role.TRAINER);
         Trainer trainer = new Trainer();
         trainer.setId(id);
         trainer.setUser(user);
