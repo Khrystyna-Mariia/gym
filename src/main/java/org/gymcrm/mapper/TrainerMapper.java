@@ -38,5 +38,6 @@ public interface TrainerMapper {
     @Mapping(target = "lastName", source = "user.lastName")
     @Mapping(target = "isActive", source = "user.active")
     @Mapping(target = "specialization", source = "specialization.trainingTypeName")
+    @Mapping(target = "trainees", ignore = true)
     UpdateTrainerProfileResponse toUpdateResponse(Trainer trainer);
 }
