@@ -3,11 +3,18 @@ package org.gymcrm.client;
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
 import org.gymcrm.filter.TransactionLogFilter;
+import org.gymcrm.security.ServiceTokenService;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 
 @Component
 public class FeignClientInterceptor implements RequestInterceptor {
+
+    private final ServiceTokenService serviceTokenService;
+
+    public FeignClientInterceptor(ServiceTokenService serviceTokenService) {
+        this.serviceTokenService = serviceTokenService;
+    }
 
     @Override
     public void apply(RequestTemplate template) {
@@ -15,5 +22,7 @@ public class FeignClientInterceptor implements RequestInterceptor {
         if (transactionId != null) {
             template.header(TransactionLogFilter.TRANSACTION_ID_HEADER, transactionId);
         }
+
+        template.header("Authorization", "Bearer " + serviceTokenService.generateToken());
     }
 }
