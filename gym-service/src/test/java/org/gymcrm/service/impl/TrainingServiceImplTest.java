@@ -2,11 +2,13 @@ package org.gymcrm.service.impl;
 
 import org.gymcrm.actuator.GymMetrics;
 import org.gymcrm.dao.TrainingDao;
+import org.gymcrm.dto.workload.ActionType;
 import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.*;
 import org.gymcrm.service.TraineeService;
 import org.gymcrm.service.TrainerService;
+import org.gymcrm.service.TrainingWorkloadReporter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,13 +38,22 @@ class TrainingServiceImplTest {
     @Mock
     private GymMetrics gymMetrics;
 
+    @Mock
+    private TrainingWorkloadReporter workloadReporter;
+
     @BeforeEach
     void setUp() {
-        trainingService = new TrainingServiceImpl(trainingDao, traineeService, trainerService, gymMetrics);
+        trainingService = new TrainingServiceImpl(
+                trainingDao,
+                traineeService,
+                trainerService,
+                gymMetrics,
+                workloadReporter
+        );
     }
 
     @Test
-    void shouldCreateTrainingUsingDao() {
+    void shouldCreateTrainingUsingDaoAndReportWorkload() {
         Training newTraining = createTraining(null, "Evening Yoga");
         Training savedTraining = createTraining(2L, "Evening Yoga");
 
@@ -58,13 +69,15 @@ class TrainingServiceImplTest {
         verify(traineeService).selectById(1L);
         verify(trainerService).selectById(1L);
         verify(trainingDao).save(newTraining);
+        verify(gymMetrics).incrementTrainingsCreated();
+        verify(workloadReporter).report(savedTraining, ActionType.ADD);
     }
 
     @Test
     void shouldThrowExceptionWhenCreatingNullTraining() {
         assertThrows(ValidationException.class, () -> trainingService.create(null));
 
-        verifyNoInteractions(trainingDao, traineeService, trainerService, gymMetrics);
+        verifyNoInteractions(trainingDao, traineeService, trainerService, gymMetrics, workloadReporter);
     }
 
     @Test
@@ -73,7 +86,7 @@ class TrainingServiceImplTest {
         training.setTrainingDuration(0);
 
         assertThrows(ValidationException.class, () -> trainingService.create(training));
-        verifyNoInteractions(trainingDao, gymMetrics);
+        verifyNoInteractions(trainingDao, gymMetrics, workloadReporter);
     }
 
     @Test
@@ -85,8 +98,7 @@ class TrainingServiceImplTest {
         assertThrows(EntityNotFoundException.class, () -> trainingService.create(training));
 
         verify(traineeService).selectById(1L);
-        verifyNoInteractions(trainerService);
-        verifyNoInteractions(trainingDao);
+        verifyNoInteractions(trainerService, trainingDao, gymMetrics, workloadReporter);
     }
 
     @Test
@@ -100,7 +112,7 @@ class TrainingServiceImplTest {
 
         verify(traineeService).selectById(1L);
         verify(trainerService).selectById(1L);
-        verifyNoInteractions(trainingDao);
+        verifyNoInteractions(trainingDao, gymMetrics, workloadReporter);
     }
 
     @Test
@@ -181,6 +193,7 @@ class TrainingServiceImplTest {
 
         assertThrows(ValidationException.class, () -> trainingService.create(t1));
         assertThrows(ValidationException.class, () -> trainingService.create(t2));
+        verifyNoInteractions(workloadReporter);
     }
 
     @Test
@@ -189,6 +202,7 @@ class TrainingServiceImplTest {
         training.setTrainingDate(null);
 
         assertThrows(ValidationException.class, () -> trainingService.create(training));
+        verifyNoInteractions(workloadReporter);
     }
 
     @Test
@@ -197,6 +211,7 @@ class TrainingServiceImplTest {
         training.setTrainingDuration(-10);
 
         assertThrows(ValidationException.class, () -> trainingService.create(training));
+        verifyNoInteractions(workloadReporter);
     }
 
     @Test
@@ -209,6 +224,7 @@ class TrainingServiceImplTest {
 
         assertThrows(ValidationException.class, () -> trainingService.create(t1));
         assertThrows(ValidationException.class, () -> trainingService.create(t2));
+        verifyNoInteractions(workloadReporter);
     }
 
     @Test
@@ -221,6 +237,7 @@ class TrainingServiceImplTest {
 
         assertThrows(EntityNotFoundException.class, () -> trainingService.create(t1));
         assertThrows(EntityNotFoundException.class, () -> trainingService.create(t2));
+        verifyNoInteractions(workloadReporter);
     }
 
     @Test
@@ -235,6 +252,7 @@ class TrainingServiceImplTest {
 
         assertThrows(EntityNotFoundException.class, () -> trainingService.create(t1));
         assertThrows(EntityNotFoundException.class, () -> trainingService.create(t2));
+        verifyNoInteractions(workloadReporter);
     }
 
     private Training createTraining(Long id, String trainingName) {

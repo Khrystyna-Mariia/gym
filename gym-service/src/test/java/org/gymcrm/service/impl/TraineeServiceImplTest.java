@@ -10,6 +10,7 @@ import org.gymcrm.model.Trainer;
 import org.gymcrm.model.User;
 import org.gymcrm.service.RegistrationResult;
 import org.gymcrm.service.TrainerService;
+import org.gymcrm.service.TrainingWorkloadReporter;
 import org.gymcrm.service.UserProfileInitializer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,9 @@ class TraineeServiceImplTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private TrainingWorkloadReporter workloadReporter;
+
     @BeforeEach
     void setUp() {
         traineeService = new TraineeServiceImpl(
@@ -51,7 +55,8 @@ class TraineeServiceImplTest {
                 userProfileInitializer,
                 trainerService,
                 gymMetrics,
-                passwordEncoder
+                passwordEncoder,
+                workloadReporter
         );
     }
 
@@ -92,7 +97,7 @@ class TraineeServiceImplTest {
     void shouldThrowExceptionWhenCreatingNullTrainee() {
         assertThrows(ValidationException.class, () -> traineeService.create(null));
 
-        verifyNoInteractions(userProfileInitializer, traineeDao, gymMetrics);
+        verifyNoInteractions(userProfileInitializer, traineeDao, gymMetrics, workloadReporter);
     }
 
     @Test
@@ -101,7 +106,7 @@ class TraineeServiceImplTest {
         traineeWithNoUser.setUser(null);
 
         assertThrows(ValidationException.class, () -> traineeService.create(traineeWithNoUser));
-        verifyNoInteractions(userProfileInitializer, traineeDao, gymMetrics);
+        verifyNoInteractions(userProfileInitializer, traineeDao, gymMetrics, workloadReporter);
     }
 
     @Test
@@ -128,7 +133,7 @@ class TraineeServiceImplTest {
     }
 
     @Test
-    void shouldDeleteTraineeByUsername() {
+    void shouldDeleteTraineeByUsernameAndReportCascadedDeletions() {
         String username = "Anna.Brown";
         Trainee trainee = createTrainee(1L, "Anna", "Brown", username);
 
@@ -137,6 +142,7 @@ class TraineeServiceImplTest {
         traineeService.deleteByUsername(username);
 
         verify(traineeDao).findByUsername(username);
+        verify(workloadReporter).reportCascadedDeletionsForTrainee(1L);
         verify(traineeDao).deleteById(1L);
     }
 
