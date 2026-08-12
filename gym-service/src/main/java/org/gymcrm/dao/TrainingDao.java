@@ -9,4 +9,6 @@ public interface TrainingDao extends CrudDao<Training, Long> {
     List<Training> findTraineeTrainings(String username, LocalDate fromDate, LocalDate toDate, String trainerName, String trainingTypeName);
 
     List<Training> findTrainerTrainings(String username, LocalDate fromDate, LocalDate toDate, String traineeName);
+
+    List<Training> findByTraineeId(Long traineeId);
 }

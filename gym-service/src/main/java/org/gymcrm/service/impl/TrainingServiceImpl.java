@@ -2,12 +2,14 @@ package org.gymcrm.service.impl;
 
 import org.gymcrm.actuator.GymMetrics;
 import org.gymcrm.dao.TrainingDao;
+import org.gymcrm.dto.workload.ActionType;
 import org.gymcrm.exception.EntityNotFoundException;
 import org.gymcrm.exception.ValidationException;
 import org.gymcrm.model.Training;
 import org.gymcrm.service.TraineeService;
 import org.gymcrm.service.TrainerService;
 import org.gymcrm.service.TrainingService;
+import org.gymcrm.service.TrainingWorkloadReporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -26,15 +28,18 @@ public class TrainingServiceImpl implements TrainingService {
     private final TraineeService traineeService;
     private final TrainerService trainerService;
     private final GymMetrics gymMetrics;
+    private final TrainingWorkloadReporter workloadReporter;
 
     public TrainingServiceImpl(TrainingDao trainingDao,
                                TraineeService traineeService,
                                TrainerService trainerService,
-                               GymMetrics gymMetrics) {
+                               GymMetrics gymMetrics,
+                               TrainingWorkloadReporter workloadReporter) {
         this.trainingDao = trainingDao;
         this.traineeService = traineeService;
         this.trainerService = trainerService;
         this.gymMetrics = gymMetrics;
+        this.workloadReporter = workloadReporter;
     }
 
     @Override
@@ -43,6 +48,7 @@ public class TrainingServiceImpl implements TrainingService {
         Training savedTraining = trainingDao.save(training);
 
         gymMetrics.incrementTrainingsCreated();
+        workloadReporter.report(savedTraining, ActionType.ADD);
         return savedTraining;
     }
 

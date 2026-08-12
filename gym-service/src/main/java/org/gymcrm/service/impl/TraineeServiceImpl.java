@@ -8,10 +8,7 @@ import org.gymcrm.model.Role;
 import org.gymcrm.model.Trainee;
 import org.gymcrm.model.Trainer;
 import org.gymcrm.model.User;
-import org.gymcrm.service.RegistrationResult;
-import org.gymcrm.service.TraineeService;
-import org.gymcrm.service.TrainerService;
-import org.gymcrm.service.UserProfileInitializer;
+import org.gymcrm.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,17 +32,20 @@ public class TraineeServiceImpl implements TraineeService {
     private final TrainerService trainerService;
     private final GymMetrics gymMetrics;
     private final PasswordEncoder passwordEncoder;
+    private final TrainingWorkloadReporter workloadReporter;
 
     public TraineeServiceImpl(TraineeDao traineeDao,
                               UserProfileInitializer userProfileInitializer,
                               TrainerService trainerService,
                               GymMetrics gymMetrics,
-                              PasswordEncoder passwordEncoder) {
+                              PasswordEncoder passwordEncoder,
+                              TrainingWorkloadReporter workloadReporter) {
         this.traineeDao = traineeDao;
         this.userProfileInitializer = userProfileInitializer;
         this.trainerService = trainerService;
         this.gymMetrics = gymMetrics;
         this.passwordEncoder = passwordEncoder;
+        this.workloadReporter = workloadReporter;
     }
 
     @Override
@@ -75,6 +75,8 @@ public class TraineeServiceImpl implements TraineeService {
 
         Trainee trainee = traineeDao.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Trainee with username " + username + " not found"));
+
+        workloadReporter.reportCascadedDeletionsForTrainee(trainee.getId());
 
         traineeDao.deleteById(trainee.getId());
     }

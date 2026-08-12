@@ -47,6 +47,18 @@ public class TrainingDaoImpl implements TrainingDao {
     }
 
     @Override
+    public List<Training> findByTraineeId(Long traineeId) {
+        logger.debug("Fetching trainings for trainee id: {}", traineeId);
+        String hql = "FROM Training t " +
+                "JOIN FETCH t.trainer tr " +
+                "JOIN FETCH tr.user tru " +
+                "WHERE t.trainee.id = :traineeId";
+        return getCurrentSession().createQuery(hql, Training.class)
+                .setParameter("traineeId", traineeId)
+                .getResultList();
+    }
+
+    @Override
     public List<Training> findTraineeTrainings(String username, LocalDate fromDate, LocalDate toDate, String trainerName, String trainingTypeName) {
         logger.debug("Filtering trainee trainings for username '{}'", username);
 
