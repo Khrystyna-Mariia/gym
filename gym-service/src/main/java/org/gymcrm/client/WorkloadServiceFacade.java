@@ -5,6 +5,7 @@ import io.github.resilience4j.retry.annotation.Retry;
 import org.gymcrm.dto.workload.WorkloadRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -19,6 +20,7 @@ public class WorkloadServiceFacade {
         this.workloadServiceClient = workloadServiceClient;
     }
 
+    @Async("workloadReporterExecutor")
     @CircuitBreaker(name = CIRCUIT_BREAKER_NAME, fallbackMethod = "fallback")
     @Retry(name = CIRCUIT_BREAKER_NAME)
     public void sendWorkload(WorkloadRequest request) {

@@ -30,7 +30,7 @@ class WorkloadServiceFacadeTest {
 
         assertDoesNotThrow(() -> workloadServiceFacade.sendWorkload(request));
 
-        verify(workloadServiceClient, times(1)).sendWorkload(request);
+        verify(workloadServiceClient, timeout(2000).times(1)).sendWorkload(request);
     }
 
     @Test
@@ -42,7 +42,7 @@ class WorkloadServiceFacadeTest {
 
         assertDoesNotThrow(() -> workloadServiceFacade.sendWorkload(request));
 
-        verify(workloadServiceClient, atLeastOnce()).sendWorkload(request);
+        verify(workloadServiceClient, timeout(3000).atLeastOnce()).sendWorkload(request);
     }
 
     private WorkloadRequest createWorkloadRequest() {
