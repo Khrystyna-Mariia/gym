@@ -1,0 +1,279 @@
+package org.gymcrm.service.impl;
+
+import org.gymcrm.actuator.GymMetrics;
+import org.gymcrm.dao.TrainingDao;
+import org.gymcrm.dto.workload.ActionType;
+import org.gymcrm.exception.EntityNotFoundException;
+import org.gymcrm.exception.ValidationException;
+import org.gymcrm.model.*;
+import org.gymcrm.service.TraineeService;
+import org.gymcrm.service.TrainerService;
+import org.gymcrm.service.TrainingWorkloadReporter;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class TrainingServiceImplTest {
+    private TrainingServiceImpl trainingService;
+
+    @Mock
+    private TrainingDao trainingDao;
+
+    @Mock
+    private TraineeService traineeService;
+
+    @Mock
+    private TrainerService trainerService;
+
+    @Mock
+    private GymMetrics gymMetrics;
+
+    @Mock
+    private TrainingWorkloadReporter workloadReporter;
+
+    @BeforeEach
+    void setUp() {
+        trainingService = new TrainingServiceImpl(
+                trainingDao,
+                traineeService,
+                trainerService,
+                gymMetrics,
+                workloadReporter
+        );
+    }
+
+    @Test
+    void shouldCreateTrainingUsingDaoAndReportWorkload() {
+        Training newTraining = createTraining(null, "Evening Yoga");
+        Training savedTraining = createTraining(2L, "Evening Yoga");
+
+        when(traineeService.selectById(1L)).thenReturn(Optional.of(new Trainee()));
+        when(trainerService.selectById(1L)).thenReturn(Optional.of(new Trainer()));
+        when(trainingDao.save(newTraining)).thenReturn(savedTraining);
+
+        Training result = trainingService.create(newTraining);
+
+        assertEquals(2L, result.getId());
+        assertEquals("Evening Yoga", result.getTrainingName());
+
+        verify(traineeService).selectById(1L);
+        verify(trainerService).selectById(1L);
+        verify(trainingDao).save(newTraining);
+        verify(gymMetrics).incrementTrainingsCreated();
+        verify(workloadReporter).report(savedTraining, ActionType.ADD);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenCreatingNullTraining() {
+        assertThrows(ValidationException.class, () -> trainingService.create(null));
+
+        verifyNoInteractions(trainingDao, traineeService, trainerService, gymMetrics, workloadReporter);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDurationIsInvalid() {
+        Training training = createTraining(null, "Invalid Duration");
+        training.setTrainingDuration(0);
+
+        assertThrows(ValidationException.class, () -> trainingService.create(training));
+        verifyNoInteractions(trainingDao, gymMetrics, workloadReporter);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTraineeDoesNotExist() {
+        Training training = createTraining(null, "Evening Yoga");
+
+        when(traineeService.selectById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class, () -> trainingService.create(training));
+
+        verify(traineeService).selectById(1L);
+        verifyNoInteractions(trainerService, trainingDao, gymMetrics, workloadReporter);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTrainerDoesNotExist() {
+        Training training = createTraining(null, "Evening Yoga");
+
+        when(traineeService.selectById(1L)).thenReturn(Optional.of(new Trainee()));
+        when(trainerService.selectById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class, () -> trainingService.create(training));
+
+        verify(traineeService).selectById(1L);
+        verify(trainerService).selectById(1L);
+        verifyNoInteractions(trainingDao, gymMetrics, workloadReporter);
+    }
+
+    @Test
+    void shouldSelectTrainingById() {
+        Training training = createTraining(1L, "Morning Fitness");
+
+        when(trainingDao.findById(1L)).thenReturn(Optional.of(training));
+
+        Optional<Training> result = trainingService.selectById(1L);
+
+        assertEquals(Optional.of(training), result);
+        verify(trainingDao).findById(1L);
+    }
+
+    @Test
+    void shouldReturnEmptyOptionalWhenTrainingNotFound() {
+        when(trainingDao.findById(99L)).thenReturn(Optional.empty());
+
+        Optional<Training> result = trainingService.selectById(99L);
+
+        assertTrue(result.isEmpty());
+
+        verify(trainingDao).findById(99L);
+    }
+
+    @Test
+    void shouldSelectAllTrainings() {
+        Training firstTraining = createTraining(1L, "Morning Fitness");
+        Training secondTraining = createTraining(2L, "Evening Yoga");
+
+        when(trainingDao.findAll()).thenReturn(List.of(firstTraining, secondTraining));
+
+        List<Training> result = trainingService.selectAll();
+
+        assertEquals(2, result.size());
+        assertTrue(result.contains(firstTraining));
+        assertTrue(result.contains(secondTraining));
+
+        verify(trainingDao).findAll();
+    }
+
+    @Test
+    void shouldGetTraineeTrainingsWithFilters() {
+        String username = "john.doe";
+        LocalDate from = LocalDate.of(2026, 1, 1);
+        LocalDate to = LocalDate.of(2026, 12, 31);
+        List<Training> expectedList = List.of(createTraining(1L, "Morning Fitness"));
+
+        when(trainingDao.findTraineeTrainings(username, from, to, "Coach Michael", "Fitness"))
+                .thenReturn(expectedList);
+
+        List<Training> result = trainingService.getTraineeTrainings(username, from, to, "Coach Michael", "Fitness");
+
+        assertEquals(1, result.size());
+        verify(trainingDao).findTraineeTrainings(username, from, to, "Coach Michael", "Fitness");
+    }
+
+    @Test
+    void shouldGetTrainerTrainingsWithFilters() {
+        String username = "coach.michael";
+        LocalDate from = LocalDate.of(2026, 6, 1);
+        LocalDate to = LocalDate.of(2026, 6, 30);
+        List<Training> expectedList = List.of(createTraining(2L, "Evening Yoga"));
+
+        when(trainingDao.findTrainerTrainings(username, from, to, "John Doe"))
+                .thenReturn(expectedList);
+
+        List<Training> result = trainingService.getTrainerTrainings(username, from, to, "John Doe");
+
+        assertEquals(1, result.size());
+        verify(trainingDao).findTrainerTrainings(username, from, to, "John Doe");
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTrainingNameIsMissing() {
+        Training t1 = createTraining(null, null);
+        Training t2 = createTraining(null, "   ");
+
+        assertThrows(ValidationException.class, () -> trainingService.create(t1));
+        assertThrows(ValidationException.class, () -> trainingService.create(t2));
+        verifyNoInteractions(workloadReporter);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTrainingDateIsNull() {
+        Training training = createTraining(null, "Yoga");
+        training.setTrainingDate(null);
+
+        assertThrows(ValidationException.class, () -> trainingService.create(training));
+        verifyNoInteractions(workloadReporter);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDurationIsNegative() {
+        Training training = createTraining(null, "Yoga");
+        training.setTrainingDuration(-10);
+
+        assertThrows(ValidationException.class, () -> trainingService.create(training));
+        verifyNoInteractions(workloadReporter);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTrainingTypeOrItsIdIsNull() {
+        Training t1 = createTraining(null, "Yoga");
+        t1.setTrainingType(null);
+
+        Training t2 = createTraining(null, "Yoga");
+        t2.getTrainingType().setId(null);
+
+        assertThrows(ValidationException.class, () -> trainingService.create(t1));
+        assertThrows(ValidationException.class, () -> trainingService.create(t2));
+        verifyNoInteractions(workloadReporter);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTraineeOrItsIdIsNull() {
+        Training t1 = createTraining(null, "Yoga");
+        t1.setTrainee(null);
+
+        Training t2 = createTraining(null, "Yoga");
+        t2.getTrainee().setId(null);
+
+        assertThrows(EntityNotFoundException.class, () -> trainingService.create(t1));
+        assertThrows(EntityNotFoundException.class, () -> trainingService.create(t2));
+        verifyNoInteractions(workloadReporter);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTrainerOrItsIdIsNull() {
+        Training t1 = createTraining(null, "Yoga");
+        t1.setTrainer(null);
+
+        Training t2 = createTraining(null, "Yoga");
+        t2.getTrainer().setId(null);
+
+        when(traineeService.selectById(1L)).thenReturn(Optional.of(new Trainee()));
+
+        assertThrows(EntityNotFoundException.class, () -> trainingService.create(t1));
+        assertThrows(EntityNotFoundException.class, () -> trainingService.create(t2));
+        verifyNoInteractions(workloadReporter);
+    }
+
+    private Training createTraining(Long id, String trainingName) {
+        Trainee trainee = new Trainee();
+        trainee.setId(1L);
+
+        Trainer trainer = new Trainer();
+        trainer.setId(1L);
+
+        TrainingType type = new TrainingType();
+        type.setId(1L);
+        type.setTrainingTypeName(TrainingTypeEnum.FITNESS);
+
+        return new Training(
+                id,
+                trainee,
+                trainer,
+                trainingName,
+                type,
+                LocalDate.of(2026, 6, 24),
+                60
+        );
+    }
+}
