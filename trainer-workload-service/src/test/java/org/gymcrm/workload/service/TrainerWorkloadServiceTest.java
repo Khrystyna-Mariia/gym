@@ -34,18 +34,13 @@ class TrainerWorkloadServiceTest {
     @InjectMocks
     private TrainerWorkloadService workloadService;
 
-    private WorkloadRequest addRequest;
+    private WorkloadRequest addEvent;
 
     @BeforeEach
     void setUp() {
-        addRequest = new WorkloadRequest(
-                "john.doe",
-                "John",
-                "Doe",
-                true,
-                LocalDate.of(2026, 9, 15),
-                60,
-                ActionType.ADD
+        addEvent = new WorkloadRequest(
+                "john.doe", "John", "Doe", true,
+                LocalDate.of(2026, 9, 15), 60, ActionType.ADD
         );
     }
 
@@ -53,7 +48,7 @@ class TrainerWorkloadServiceTest {
     void processWorkload_NewTrainer_CreatesAndSavesWorkload() {
         when(repository.findByTrainerUsername("john.doe")).thenReturn(Optional.empty());
 
-        workloadService.processWorkload(addRequest);
+        workloadService.processWorkload(addEvent);
 
         verify(repository).save(argThat(trainer -> {
             assertEquals("john.doe", trainer.getTrainerUsername());
@@ -67,6 +62,25 @@ class TrainerWorkloadServiceTest {
             assertEquals(60, trainer.getYears().get(0).getMonths().get(0).getSummaryDuration());
             return true;
         }));
+    }
+
+    @Test
+    void processWorkload_ExistingYearAndMonth_AddsToExistingDuration() {
+        TrainerWorkload existing = new TrainerWorkload();
+        existing.setTrainerUsername("john.doe");
+        YearlyWorkload year = new YearlyWorkload();
+        year.setYear(2026);
+        MonthlyWorkload month = new MonthlyWorkload();
+        month.setMonth(9);
+        month.setSummaryDuration(30);
+        year.getMonths().add(month);
+        existing.getYears().add(year);
+
+        when(repository.findByTrainerUsername("john.doe")).thenReturn(Optional.of(existing));
+
+        workloadService.processWorkload(addEvent);
+
+        assertEquals(90, month.getSummaryDuration());
     }
 
     @Test
@@ -88,11 +102,11 @@ class TrainerWorkloadServiceTest {
 
         when(repository.findByTrainerUsername("john.doe")).thenReturn(Optional.of(existingWorkload));
 
-        WorkloadRequest deleteRequest = new WorkloadRequest(
+        WorkloadRequest deleteEvent = new WorkloadRequest(
                 "john.doe", "John", "Doe", true, LocalDate.of(2026, 9, 15), 60, ActionType.DELETE
         );
 
-        workloadService.processWorkload(deleteRequest);
+        workloadService.processWorkload(deleteEvent);
 
         assertEquals(0, month.getSummaryDuration());
         verify(repository).save(existingWorkload);
