@@ -28,25 +28,25 @@ public class TrainerWorkloadService {
         this.trainerWorkloadRepository = trainerWorkloadRepository;
     }
 
-    public void processWorkload(WorkloadRequest request) {
-        TrainerWorkload trainerWorkload = trainerWorkloadRepository.findByTrainerUsername(request.trainerUsername())
-                .orElseGet(() -> createTrainerWorkload(request));
+    public void processWorkload(WorkloadRequest event) {
+        TrainerWorkload trainerWorkload = trainerWorkloadRepository.findByTrainerUsername(event.trainerUsername())
+                .orElseGet(() -> createTrainerWorkload(event));
 
-        trainerWorkload.setFirstName(request.trainerFirstName());
-        trainerWorkload.setLastName(request.trainerLastName());
-        trainerWorkload.setActive(request.isActive());
+        trainerWorkload.setFirstName(event.trainerFirstName());
+        trainerWorkload.setLastName(event.trainerLastName());
+        trainerWorkload.setActive(event.isActive());
 
-        int year = request.trainingDate().getYear();
-        int month = request.trainingDate().getMonthValue();
+        int year = event.trainingDate().getYear();
+        int month = event.trainingDate().getMonthValue();
 
         YearlyWorkload yearlyWorkload = findOrCreateYear(trainerWorkload, year);
         MonthlyWorkload monthlyWorkload = findOrCreateMonth(yearlyWorkload, month);
 
-        applyAction(monthlyWorkload, request);
+        applyAction(monthlyWorkload, event);
 
         trainerWorkloadRepository.save(trainerWorkload);
         logger.info("Processed {} of {} minutes for trainer '{}' on {}-{}: new total = {}",
-                request.actionType(), request.trainingDuration(), request.trainerUsername(),
+                event.actionType(), event.trainingDuration(), event.trainerUsername(),
                 year, month, monthlyWorkload.getSummaryDuration());
     }
 
@@ -55,9 +55,9 @@ public class TrainerWorkloadService {
                 .map(workloadMapper::toResponse);
     }
 
-    private TrainerWorkload createTrainerWorkload(WorkloadRequest request) {
+    private TrainerWorkload createTrainerWorkload(WorkloadRequest event) {
         TrainerWorkload trainerWorkload = new TrainerWorkload();
-        trainerWorkload.setTrainerUsername(request.trainerUsername());
+        trainerWorkload.setTrainerUsername(event.trainerUsername());
         return trainerWorkload;
     }
 
@@ -88,10 +88,10 @@ public class TrainerWorkloadService {
                 });
     }
 
-    private void applyAction(MonthlyWorkload monthlyWorkload, WorkloadRequest request) {
-        int delta = switch (request.actionType()) {
-            case ADD -> request.trainingDuration();
-            case DELETE -> -request.trainingDuration();
+    private void applyAction(MonthlyWorkload monthlyWorkload, WorkloadRequest event) {
+        int delta = switch (event.actionType()) {
+            case ADD -> event.trainingDuration();
+            case DELETE -> -event.trainingDuration();
         };
         int updated = monthlyWorkload.getSummaryDuration() + delta;
         monthlyWorkload.setSummaryDuration(Math.max(updated, 0));
