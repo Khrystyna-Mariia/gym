@@ -1,9 +1,9 @@
 package org.gymcrm.service.impl;
 
-import org.gymcrm.client.WorkloadServiceFacade;
 import org.gymcrm.dao.TrainingDao;
 import org.gymcrm.dto.workload.ActionType;
 import org.gymcrm.dto.workload.WorkloadRequest;
+import org.gymcrm.messaging.WorkloadEventPublisher;
 import org.gymcrm.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,32 +25,32 @@ class TrainingWorkloadReporterImplTest {
     private TrainingDao trainingDao;
 
     @Mock
-    private WorkloadServiceFacade workloadServiceFacade;
+    private WorkloadEventPublisher workloadEventPublisher;
 
     private TrainingWorkloadReporterImpl reporter;
 
     @BeforeEach
     void setUp() {
-        reporter = new TrainingWorkloadReporterImpl(trainingDao, workloadServiceFacade);
+        reporter = new TrainingWorkloadReporterImpl(trainingDao, workloadEventPublisher);
     }
 
     @Test
-    void report_shouldConstructCorrectRequestAndSendToFacade() {
+    void report_shouldConstructCorrectEventAndPublish() {
         Training training = createTraining(1L, "john.coach", "John", "Coach", true);
 
         reporter.report(training, ActionType.ADD);
 
         ArgumentCaptor<WorkloadRequest> captor = ArgumentCaptor.forClass(WorkloadRequest.class);
-        verify(workloadServiceFacade).sendWorkload(captor.capture());
+        verify(workloadEventPublisher).publish(captor.capture());
 
-        WorkloadRequest request = captor.getValue();
-        assertEquals("john.coach", request.trainerUsername());
-        assertEquals("John", request.trainerFirstName());
-        assertEquals("Coach", request.trainerLastName());
-        assertTrue(request.isActive());
-        assertEquals(LocalDate.of(2026, 8, 12), request.trainingDate());
-        assertEquals(60, request.trainingDuration());
-        assertEquals(ActionType.ADD, request.actionType());
+        WorkloadRequest event = captor.getValue();
+        assertEquals("john.coach", event.trainerUsername());
+        assertEquals("John", event.trainerFirstName());
+        assertEquals("Coach", event.trainerLastName());
+        assertTrue(event.isActive());
+        assertEquals(LocalDate.of(2026, 8, 12), event.trainingDate());
+        assertEquals(60, event.trainingDuration());
+        assertEquals(ActionType.ADD, event.actionType());
     }
 
     @Test
@@ -66,16 +66,16 @@ class TrainingWorkloadReporterImplTest {
         verify(trainingDao).findByTraineeId(traineeId);
 
         ArgumentCaptor<WorkloadRequest> captor = ArgumentCaptor.forClass(WorkloadRequest.class);
-        verify(workloadServiceFacade, times(2)).sendWorkload(captor.capture());
+        verify(workloadEventPublisher, times(2)).publish(captor.capture());
 
-        List<WorkloadRequest> requests = captor.getAllValues();
-        assertEquals(2, requests.size());
+        List<WorkloadRequest> events = captor.getAllValues();
+        assertEquals(2, events.size());
 
-        assertEquals("trainer.one", requests.get(0).trainerUsername());
-        assertEquals(ActionType.DELETE, requests.get(0).actionType());
+        assertEquals("trainer.one", events.get(0).trainerUsername());
+        assertEquals(ActionType.DELETE, events.get(0).actionType());
 
-        assertEquals("trainer.two", requests.get(1).trainerUsername());
-        assertEquals(ActionType.DELETE, requests.get(1).actionType());
+        assertEquals("trainer.two", events.get(1).trainerUsername());
+        assertEquals(ActionType.DELETE, events.get(1).actionType());
     }
 
     private Training createTraining(Long id, String trainerUsername, String firstName, String lastName, boolean active) {
