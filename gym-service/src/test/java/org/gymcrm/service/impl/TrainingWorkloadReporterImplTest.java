@@ -1,9 +1,9 @@
 package org.gymcrm.service.impl;
 
-import org.gymcrm.client.WorkloadServiceFacade;
 import org.gymcrm.dao.TrainingDao;
 import org.gymcrm.dto.workload.ActionType;
 import org.gymcrm.dto.workload.WorkloadRequest;
+import org.gymcrm.event.WorkloadReportEvent;
 import org.gymcrm.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -25,25 +26,25 @@ class TrainingWorkloadReporterImplTest {
     private TrainingDao trainingDao;
 
     @Mock
-    private WorkloadServiceFacade workloadServiceFacade;
+    private ApplicationEventPublisher eventPublisher;
 
     private TrainingWorkloadReporterImpl reporter;
 
     @BeforeEach
     void setUp() {
-        reporter = new TrainingWorkloadReporterImpl(trainingDao, workloadServiceFacade);
+        reporter = new TrainingWorkloadReporterImpl(trainingDao, eventPublisher);
     }
 
     @Test
-    void report_shouldConstructCorrectRequestAndSendToFacade() {
+    void report_shouldConstructCorrectEventAndPublish() {
         Training training = createTraining(1L, "john.coach", "John", "Coach", true);
 
         reporter.report(training, ActionType.ADD);
 
-        ArgumentCaptor<WorkloadRequest> captor = ArgumentCaptor.forClass(WorkloadRequest.class);
-        verify(workloadServiceFacade).sendWorkload(captor.capture());
+        ArgumentCaptor<WorkloadReportEvent> captor = ArgumentCaptor.forClass(WorkloadReportEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
 
-        WorkloadRequest request = captor.getValue();
+        WorkloadRequest request = captor.getValue().payload();
         assertEquals("john.coach", request.trainerUsername());
         assertEquals("John", request.trainerFirstName());
         assertEquals("Coach", request.trainerLastName());
@@ -65,17 +66,17 @@ class TrainingWorkloadReporterImplTest {
 
         verify(trainingDao).findByTraineeId(traineeId);
 
-        ArgumentCaptor<WorkloadRequest> captor = ArgumentCaptor.forClass(WorkloadRequest.class);
-        verify(workloadServiceFacade, times(2)).sendWorkload(captor.capture());
+        ArgumentCaptor<WorkloadReportEvent> captor = ArgumentCaptor.forClass(WorkloadReportEvent.class);
+        verify(eventPublisher, times(2)).publishEvent(captor.capture());
 
-        List<WorkloadRequest> requests = captor.getAllValues();
-        assertEquals(2, requests.size());
+        List<WorkloadReportEvent> events = captor.getAllValues();
+        assertEquals(2, events.size());
 
-        assertEquals("trainer.one", requests.get(0).trainerUsername());
-        assertEquals(ActionType.DELETE, requests.get(0).actionType());
+        assertEquals("trainer.one", events.get(0).payload().trainerUsername());
+        assertEquals(ActionType.DELETE, events.get(0).payload().actionType());
 
-        assertEquals("trainer.two", requests.get(1).trainerUsername());
-        assertEquals(ActionType.DELETE, requests.get(1).actionType());
+        assertEquals("trainer.two", events.get(1).payload().trainerUsername());
+        assertEquals(ActionType.DELETE, events.get(1).payload().actionType());
     }
 
     private Training createTraining(Long id, String trainerUsername, String firstName, String lastName, boolean active) {
