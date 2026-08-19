@@ -1,28 +1,26 @@
 package org.gymcrm.workload.model;
 
-import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.mongodb.core.mapping.Field;
 
-@Entity
-@Table(name = "monthly_workload", uniqueConstraints = @UniqueConstraint(columnNames = {"yearly_workload_id", "month"}))
 @Getter
 @Setter
 @NoArgsConstructor
 public class MonthlyWorkload {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @NotNull(message = "Month is required")
+    @Min(value = 1, message = "Month must be between 1 and 12")
+    @Max(value = 12, message = "Month must be between 1 and 12")
+    @Field("month")
+    private Integer month;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "yearly_workload_id", nullable = false)
-    private YearlyWorkload yearlyWorkload;
-
-    @Column(name = "workload_month", nullable = false)
-    private int month;
-
-    @Column(name = "summary_duration", nullable = false)
-    private int summaryDuration;
+    @NotNull(message = "Summary duration is required")
+    @Min(value = 0, message = "Summary duration cannot be negative")
+    @Field("summaryDuration")
+    private Integer summaryDuration;
 }
