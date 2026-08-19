@@ -54,7 +54,7 @@ class TrainerWorkloadServiceTest {
             assertEquals("john.doe", trainer.getTrainerUsername());
             assertEquals("John", trainer.getFirstName());
             assertEquals("Doe", trainer.getLastName());
-            assertTrue(trainer.isActive());
+            assertTrue(trainer.getActive());
             assertEquals(1, trainer.getYears().size());
             assertEquals(2026, trainer.getYears().get(0).getYear());
             assertEquals(1, trainer.getYears().get(0).getMonths().size());
@@ -90,12 +90,10 @@ class TrainerWorkloadServiceTest {
 
         YearlyWorkload year = new YearlyWorkload();
         year.setYear(2026);
-        year.setTrainerWorkload(existingWorkload);
 
         MonthlyWorkload month = new MonthlyWorkload();
         month.setMonth(9);
         month.setSummaryDuration(30);
-        month.setYearlyWorkload(year);
 
         year.getMonths().add(month);
         existingWorkload.getYears().add(year);
@@ -137,5 +135,34 @@ class TrainerWorkloadServiceTest {
         Optional<WorkloadSummaryResponse> result = workloadService.getSummary("unknown");
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void search_ByFirstAndLastName_ReturnsMappedResults() {
+        TrainerWorkload workload = new TrainerWorkload();
+        workload.setTrainerUsername("john.doe");
+        workload.setFirstName("John");
+        workload.setLastName("Doe");
+
+        WorkloadSummaryResponse expectedResponse = new WorkloadSummaryResponse(
+                "john.doe", "John", "Doe", true, List.of()
+        );
+
+        when(repository.findByFirstNameAndLastName("John", "Doe")).thenReturn(List.of(workload));
+        when(mapper.toResponse(workload)).thenReturn(expectedResponse);
+
+        List<WorkloadSummaryResponse> results = workloadService.search("John", "Doe");
+
+        assertEquals(1, results.size());
+        assertEquals(expectedResponse, results.get(0));
+    }
+
+    @Test
+    void search_NoMatches_ReturnsEmptyList() {
+        when(repository.findByFirstNameAndLastName("Jane", "Smith")).thenReturn(List.of());
+
+        List<WorkloadSummaryResponse> results = workloadService.search("Jane", "Smith");
+
+        assertTrue(results.isEmpty());
     }
 }

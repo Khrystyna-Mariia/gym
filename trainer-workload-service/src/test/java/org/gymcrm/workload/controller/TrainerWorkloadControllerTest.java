@@ -90,4 +90,19 @@ class TrainerWorkloadControllerTest {
         mockMvc.perform(get("/api/v1/workload/unknown"))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void search_ByFirstAndLastName_Returns200AndResults() throws Exception {
+        WorkloadSummaryResponse summary = new WorkloadSummaryResponse(
+                "david.miller", "David", "Miller", true, List.of()
+        );
+
+        when(workloadService.search("David", "Miller")).thenReturn(List.of(summary));
+
+        mockMvc.perform(get("/api/v1/workload/search")
+                        .param("firstName", "David")
+                        .param("lastName", "Miller"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].trainerUsername").value("david.miller"));
+    }
 }
