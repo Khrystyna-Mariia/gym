@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/workload")
 @Tag(name = "Trainer Workload", description = "Accepts training workload events and returns monthly summaries")
@@ -34,5 +36,12 @@ public class TrainerWorkloadController {
         return workloadService.getSummary(trainerUsername)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "Search trainer workload summaries by first and last name")
+    public ResponseEntity<List<WorkloadSummaryResponse>> search(@RequestParam String firstName,
+                                                                @RequestParam String lastName) {
+        return ResponseEntity.ok(workloadService.search(firstName, lastName));
     }
 }
