@@ -1,33 +1,41 @@
 package org.gymcrm.workload.model;
 
-import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@Table(name = "trainer_workload")
+@Document(collection = "trainer_workload")
+@CompoundIndex(name = "first_last_name_idx", def = "{'firstName': 1, 'lastName': 1}")
 @Getter
 @Setter
 @NoArgsConstructor
 public class TrainerWorkload {
 
     @Id
-    @Column(name = "trainer_username")
     private String trainerUsername;
 
-    @Column(name = "first_name", nullable = false)
+    @NotBlank(message = "Trainer first name is required")
+    @Field("firstName")
     private String firstName;
 
-    @Column(name = "last_name", nullable = false)
+    @NotBlank(message = "Trainer last name is required")
+    @Field("lastName")
     private String lastName;
 
-    @Column(name = "is_active", nullable = false)
-    private boolean active;
+    @NotNull(message = "Trainer status is required")
+    @Field("active")
+    private Boolean active;
 
-    @OneToMany(mappedBy = "trainerWorkload", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+
+    @Field("years")
     private List<YearlyWorkload> years = new ArrayList<>();
 }

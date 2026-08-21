@@ -10,12 +10,11 @@ import org.gymcrm.workload.repository.TrainerWorkloadRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
-@Transactional
 public class TrainerWorkloadService {
 
     private static final Logger logger = LoggerFactory.getLogger(TrainerWorkloadService.class);
@@ -29,8 +28,18 @@ public class TrainerWorkloadService {
     }
 
     public void processWorkload(WorkloadRequest event) {
+        logger.info("Processing workload event: trainer={}, action={}, duration={}",
+                event.trainerUsername(), event.actionType(), event.trainingDuration());
+
         TrainerWorkload trainerWorkload = trainerWorkloadRepository.findByTrainerUsername(event.trainerUsername())
-                .orElseGet(() -> createTrainerWorkload(event));
+                .map(existing -> {
+                    logger.debug("Operation: found existing trainer record for '{}'", event.trainerUsername());
+                    return existing;
+                })
+                .orElseGet(() -> {
+                    logger.debug("Operation: no trainer record found for '{}', creating a new one", event.trainerUsername());
+                    return createTrainerWorkload(event);
+                });
 
         trainerWorkload.setFirstName(event.trainerFirstName());
         trainerWorkload.setLastName(event.trainerLastName());
@@ -55,6 +64,12 @@ public class TrainerWorkloadService {
                 .map(workloadMapper::toResponse);
     }
 
+    public List<WorkloadSummaryResponse> search(String firstName, String lastName) {
+        return trainerWorkloadRepository.findByFirstNameAndLastName(firstName, lastName).stream()
+                .map(workloadMapper::toResponse)
+                .toList();
+    }
+
     private TrainerWorkload createTrainerWorkload(WorkloadRequest event) {
         TrainerWorkload trainerWorkload = new TrainerWorkload();
         trainerWorkload.setTrainerUsername(event.trainerUsername());
@@ -66,8 +81,8 @@ public class TrainerWorkloadService {
                 .filter(y -> y.getYear() == year)
                 .findFirst()
                 .orElseGet(() -> {
+                    logger.debug("Operation: creating new Year element {} for trainer '{}'", year, trainerWorkload.getTrainerUsername());
                     YearlyWorkload newYear = new YearlyWorkload();
-                    newYear.setTrainerWorkload(trainerWorkload);
                     newYear.setYear(year);
                     trainerWorkload.getYears().add(newYear);
                     return newYear;
@@ -79,8 +94,8 @@ public class TrainerWorkloadService {
                 .filter(m -> m.getMonth() == month)
                 .findFirst()
                 .orElseGet(() -> {
+                    logger.debug("Operation: creating new Month element {} for year {}", month, yearlyWorkload.getYear());
                     MonthlyWorkload newMonth = new MonthlyWorkload();
-                    newMonth.setYearlyWorkload(yearlyWorkload);
                     newMonth.setMonth(month);
                     newMonth.setSummaryDuration(0);
                     yearlyWorkload.getMonths().add(newMonth);
@@ -94,6 +109,8 @@ public class TrainerWorkloadService {
             case DELETE -> -event.trainingDuration();
         };
         int updated = monthlyWorkload.getSummaryDuration() + delta;
+        logger.debug("Operation: updating Trainings summary duration from {} to {} ({} {})",
+                monthlyWorkload.getSummaryDuration(), Math.max(updated, 0), event.actionType(), delta);
         monthlyWorkload.setSummaryDuration(Math.max(updated, 0));
 
         if (updated < 0) {

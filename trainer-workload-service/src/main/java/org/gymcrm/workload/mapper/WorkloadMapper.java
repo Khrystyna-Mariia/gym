@@ -27,7 +27,7 @@ public class WorkloadMapper {
                 trainerWorkload.getTrainerUsername(),
                 trainerWorkload.getFirstName(),
                 trainerWorkload.getLastName(),
-                trainerWorkload.isActive(),
+                Boolean.TRUE.equals(trainerWorkload.getActive()),
                 years
         );
     }
