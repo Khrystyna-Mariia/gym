@@ -1,0 +1,87 @@
+networks:
+  gym-network:
+    driver: bridge
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_DB: gym_crm
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - gym-network
+
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - gym-network
+
+  activemq:
+    image: apache/activemq-classic:5.18.4
+    container_name: activemq
+    environment:
+      ACTIVEMQ_ADMIN_LOGIN: admin
+      ACTIVEMQ_ADMIN_PASSWORD: admin
+    ports:
+      - "61616:61616"
+      - "8161:8161"
+    networks:
+      - gym-network
+
+  eureka-server:
+    build: ./eureka-server
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - gym-network
+
+  gym-service:
+    build: ./gym-service
+    container_name: gym-service
+    depends_on:
+      - postgres
+      - activemq
+      - eureka-server
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://postgres:5432/gym_crm
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      SERVICE_JWT_SECRET: 1fZxu+Aap4l/FQda9j+AyFPZ4rhWEpSpsHshfliipgU=
+      EUREKA_URI: http://eureka-server:8761/eureka
+      ACTIVEMQ_BROKER_URL: tcp://activemq:61616
+      ACTIVEMQ_USER: admin
+      ACTIVEMQ_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    networks:
+      - gym-network
+
+  trainer-workload-service:
+    build: ./trainer-workload-service
+    container_name: trainer-workload-service
+    depends_on:
+      - mongo
+      - activemq
+      - eureka-server
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      MONGODB_URI: mongodb://mongo:27017/workload_db
+      EUREKA_URI: http://eureka-server:8761/eureka/
+      ACTIVEMQ_BROKER_URL: tcp://activemq:61616
+      ACTIVEMQ_USER: admin
+      ACTIVEMQ_PASSWORD: admin
+      SERVICE_JWT_SECRET: 1fZxu+Aap4l/FQda9j+AyFPZ4rhWEpSpsHshfliipgU=
+    ports:
+      - "8082:8082"
+    networks:
+      - gym-network
